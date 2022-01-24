@@ -100,8 +100,19 @@
 
 			if (response != null && response.IsServiceException && response.ReturnValue is Exception ex)
 			{
-				// TODO: We should throw a new exception so the call stack isn't messed up. [Bill, 1/24/2022]
-				throw ex;
+				// Try to throw a new exception of the same type so the outer exception's StackTrace will be from the client,
+				// and the inner exception's StackTrace will be from the server.
+				Type exceptionType = ex.GetType();
+				ConstructorInfo? constructor = exceptionType.GetConstructor(new[] { typeof(string), typeof(Exception) });
+				if (constructor != null)
+				{
+					throw (Exception)constructor.Invoke(new object?[] { ex.Message, ex });
+				}
+				else
+				{
+					// We have to rethrow the returned service exception, so this will not preserve the server's StackTrace.
+					throw ex;
+				}
 			}
 
 			object? result = response?.ReturnValue;

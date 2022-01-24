@@ -18,6 +18,7 @@
 		public static T ReadFrom<T>(Stream stream, ISerializer serializer)
 			where T : Message
 		{
+			// The message length is always written in little endian order.
 			byte[] messageLength = ReadExactly(stream, sizeof(int));
 			if (!BitConverter.IsLittleEndian)
 			{
@@ -36,6 +37,10 @@
 		public void WriteTo(Stream stream, ISerializer serializer)
 		{
 			byte[] message = serializer.Serialize(this, this.GetType());
+
+			// Always write the message length bytes in little endian order since that's Intel's
+			// preferred ordering, so it'll be the most common order we see. If the client or server
+			// client is using a different endianness, this will handle it.
 			byte[] messageLength = BitConverter.GetBytes(message.Length);
 			if (!BitConverter.IsLittleEndian)
 			{

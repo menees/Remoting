@@ -35,6 +35,10 @@
 
 		internal void SendRequest(TimeSpan connectTimeout, Action<Stream> sendRequest)
 		{
+			// We only use a pipe for a single request. Remotely invoked interfaces shouldn't be chatty anyway,
+			// Single-use connections are easier to reason about and manage the state for. They also give us
+			// a lot of freedom to swap in other transports later (e.g., Http, ZeroMQ, TcpClient/TcpListener) if desired.
+			// HTTP 1.0 used non-persistent connections, and it was fine for non-chatty interfaces.
 			using NamedPipeClientStream pipe = new(this.ServerName, this.PipeName, Direction, Options) { ReadMode = Mode };
 			pipe.Connect(ConvertTimeout(connectTimeout));
 			sendRequest(pipe);

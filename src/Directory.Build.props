@@ -12,6 +12,7 @@
 		<LangVersion>latest</LangVersion>
 		<Copyright>Copyright © 2022-$([System.DateTime]::UtcNow.ToString(`yyyy`)) Bill Menees</Copyright>
 
+		<!-- Note: We can't target .NET Standard 2.0 because DispatchProxy.Create isn't supported there (due to lack of Reflection.Emit). -->
 		<!-- https://docs.microsoft.com/en-us/dotnet/standard/frameworks -->
 		<MeneesTargetNetFramework>net48</MeneesTargetNetFramework>
 		<MeneesTargetNetCoreBase>net6.0</MeneesTargetNetCoreBase>
