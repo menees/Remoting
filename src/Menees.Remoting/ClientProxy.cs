@@ -47,10 +47,13 @@
 				throw new InvalidOperationException("Client proxy was not initialized.");
 			}
 
-			// TODO: Serialize args and transmit to server using this.client. Deserialize result. [Bill, 1/23/2022]
-			this.client.GetHashCode();
+			if (targetMethod == null)
+			{
+				throw new ArgumentNullException(nameof(targetMethod));
+			}
 
-			throw new NotImplementedException();
+			object? result = this.Invoke(targetMethod, args ?? Array.Empty<object?>());
+			return result;
 		}
 
 		#endregion

@@ -4,6 +4,7 @@
 
 	using System;
 	using System.Collections.Generic;
+	using System.Reflection;
 	using System.Text;
 
 	#endregion
@@ -74,6 +75,20 @@
 				this.Serializer = null!;
 				this.disposed = true;
 			}
+		}
+
+		#endregion
+
+		#region Private Protected Methods
+
+		private protected static string GetMethodSignature(MethodInfo methodInfo)
+		{
+			// For our purposes MethodInfo.ToString() returns a unique enough signature.
+			// For example, typeof(string).GetMethods().Last(m => m.Name == "IndexOf").ToString()
+			// returns "Int32 IndexOf(Char, Int32, Int32)".
+			// For other options see: https://stackoverflow.com/a/1312321/1882616
+			string result = methodInfo.ToString() ?? throw new InvalidOperationException("Null method signature is not supported.");
+			return result;
 		}
 
 		#endregion

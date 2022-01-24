@@ -92,13 +92,11 @@
 				this.State = ListenerState.ProcessingRequest;
 				try
 				{
-					// TODO: Finish ProcessRequest. [Bill, 1/24/2022]
-					this.GetHashCode();
+					this.server.ProcessRequest(this.pipe);
 				}
 				catch (Exception ex)
 				{
-					// TODO: Propagate exception back to caller. [Bill, 1/24/2022]
-					ex.GetHashCode();
+					this.server.ReportUnhandledException?.Invoke(ex);
 				}
 			}
 		}
@@ -109,12 +107,18 @@
 			{
 				this.State = ListenerState.FinishedRequest;
 
-				// Make sure any task exception is observed. This shouldn't occur if ProcessRequest
-				// handles all exceptions, but we'll pass this on just to be as careful as possible.
+				// Try to ensure any task exception is observed. This shouldn't occur if ProcessRequest
+				// handles all exceptions, but we'll try to pass this on just to be as careful as possible.
+				// Note: If the server has no handler action, then we'll ignore the exception so it will go
+				// to .NET's TaskScheduler.UnobservedTaskException event.
 				// https://devblogs.microsoft.com/pfxteam/task-exception-handling-in-net-4-5/
-				if (processingRequest.IsFaulted && processingRequest.Exception != null)
+				if (processingRequest.IsFaulted)
 				{
-					this.server.ReportUnhandledException(processingRequest.Exception);
+					Action<Exception>? reportException = this.server.ReportUnhandledException;
+					if (reportException != null && processingRequest.Exception != null)
+					{
+						reportException(processingRequest.Exception);
+					}
 				}
 
 				processingRequest.Dispose();

@@ -4,6 +4,7 @@
 
 	using System;
 	using System.Collections.Generic;
+	using System.IO;
 	using System.IO.Pipes;
 	using System.Linq;
 	using System.Text;
@@ -14,12 +15,6 @@
 
 	internal sealed class PipeClient : PipeBase
 	{
-		#region Private Data Members
-
-		private NamedPipeClientStream? pipe;
-
-		#endregion
-
 		#region Constructors
 
 		internal PipeClient(string pipeName, string serverName)
@@ -38,34 +33,11 @@
 
 		#region Public Methods
 
-		public void Connect(TimeSpan timeout)
+		internal void SendRequest(TimeSpan connectTimeout, Action<Stream> sendRequest)
 		{
-			this.EnsurePipe().Connect(ConvertTimeout(timeout));
-		}
-
-		public async Task ConnectAsync(TimeSpan timeout, CancellationToken cancellationToken)
-		{
-			await this.EnsurePipe().ConnectAsync(ConvertTimeout(timeout), cancellationToken);
-		}
-
-		#endregion
-
-		#region Protected Methods
-
-		protected override void Dispose(bool disposing)
-		{
-			base.Dispose(disposing);
-			this.pipe?.Dispose();
-		}
-
-		#endregion
-
-		#region Private Methods
-
-		private NamedPipeClientStream EnsurePipe()
-		{
-			this.pipe ??= new(this.ServerName, this.PipeName, Direction, Options) { ReadMode = Mode };
-			return this.pipe;
+			using NamedPipeClientStream pipe = new(this.ServerName, this.PipeName, Direction, Options) { ReadMode = Mode };
+			pipe.Connect(ConvertTimeout(connectTimeout));
+			sendRequest(pipe);
 		}
 
 		#endregion

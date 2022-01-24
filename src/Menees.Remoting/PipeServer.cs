@@ -4,6 +4,7 @@
 
 	using System;
 	using System.Collections.Generic;
+	using System.IO;
 	using System.IO.Pipes;
 	using System.Linq;
 	using System.Text;
@@ -24,7 +25,7 @@
 
 		#region Constructors
 
-		internal PipeServer(string pipeName, int minListeners, int maxListeners)
+		internal PipeServer(string pipeName, int minListeners, int maxListeners, Action<Stream> processRequest)
 			: base(pipeName)
 		{
 			if (minListeners <= 0)
@@ -48,12 +49,21 @@
 
 			this.minListeners = minListeners;
 			this.maxListeners = maxListeners;
+			this.ProcessRequest = processRequest;
 
 			// Note: We don't create any listeners here in the constructor because we want to finish construction first.
 			// If we created even one listener here, then it could start processing on a worker thread and immediately
 			// call back in to EnsureMinListeners, which would mean a listener was using a partially constructed PipeServer. Yuck.
 			// It's safer, better, and easier to reason about if we require a separate post-constructor call to EnsureMinListeners.
 		}
+
+		#endregion
+
+		#region Public Properties
+
+		public Action<Stream> ProcessRequest { get; }
+
+		public Action<Exception>? ReportUnhandledException { get; set; }
 
 		#endregion
 
@@ -88,11 +98,6 @@
 					}
 				}
 			}
-		}
-
-		internal void ReportUnhandledException(Exception ex)
-		{
-			// TODO: Finish ReportUnhandledException. [Bill, 1/24/2022]
 		}
 
 		#endregion

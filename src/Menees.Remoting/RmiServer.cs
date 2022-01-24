@@ -3,8 +3,12 @@
 	#region Using Directives
 
 	using System;
+	using System.Collections.Concurrent;
 	using System.Collections.Generic;
+	using System.IO;
 	using System.IO.Pipes;
+	using System.Linq;
+	using System.Reflection;
 	using System.Text;
 	using System.Threading;
 	using System.Threading.Tasks;
@@ -21,8 +25,12 @@
 	{
 		#region Private Data Members
 
+		private static readonly Dictionary<string, MethodInfo> MethodSignatureCache =
+			typeof(TServiceInterface).GetMethods().ToDictionary(method => GetMethodSignature(method));
+
 		private readonly PipeServer pipe;
-		private readonly TServiceInterface serviceInstance;
+
+		private TServiceInterface? serviceInstance;
 
 		#endregion
 
@@ -50,17 +58,104 @@
 			this.serviceInstance = serviceInstance;
 
 			// Note: The pipe is created with no listeners until we explicitly start them.
-			this.pipe = new(serverPath, minListeners, maxListeners);
+			this.pipe = new(serverPath, minListeners, maxListeners, this.ProcessRequest);
 		}
 
 		#endregion
 
-		#region Constructors
+		#region Public Properties
+
+		/// <summary>
+		/// Used to report any unhandled or unobserved exceptions from server listener threads.
+		/// </summary>
+		public Action<Exception>? ReportUnhandledException
+		{
+			get => this.pipe.ReportUnhandledException;
+			set => this.pipe.ReportUnhandledException = value;
+		}
+
+		#endregion
+
+		#region Public Methods
 
 		/// <summary>
 		/// Starts listening for incoming requests.
 		/// </summary>
 		public void Start() => this.pipe.EnsureMinListeners();
+
+		#endregion
+
+		#region Protected Methods
+
+		/// <inheritdoc/>
+		protected override void Dispose(bool disposing)
+		{
+			base.Dispose(disposing);
+			if (disposing)
+			{
+				this.serviceInstance = null;
+				this.pipe.Dispose();
+			}
+		}
+
+		#endregion
+
+		#region Private Methods
+
+		private static Response CreateResponse(Exception ex)
+		{
+			Response response = new()
+			{
+				IsServiceException = true,
+				ReturnValue = ex,
+				ReturnType = ex.GetType(),
+			};
+
+			return response;
+		}
+
+		private void ProcessRequest(Stream clientStream)
+		{
+			try
+			{
+				Request request = Message.ReadFrom<Request>(clientStream, this.Serializer);
+				Response response;
+
+				if (!MethodSignatureCache.TryGetValue(request.MethodSignature ?? string.Empty, out MethodInfo? method))
+				{
+					response = CreateResponse(new TargetException(
+						$"A {typeof(TServiceInterface).FullName} method with signature '{request.MethodSignature}' was not found."));
+				}
+				else
+				{
+					IEnumerable<(object? Value, Type DataType)> args = request.Arguments ?? Enumerable.Empty<(object? Value, Type DataType)>();
+					try
+					{
+						object? methodResult = method.Invoke(this.serviceInstance, args.Select(tuple => tuple.Value).ToArray());
+						response = new Response
+						{
+							ReturnValue = methodResult,
+							ReturnType = methodResult?.GetType() ?? method.ReturnType,
+						};
+					}
+					catch (TargetInvocationException ex)
+					{
+						// The inner exception is typically the original exception thrown by the invoked method.
+						response = CreateResponse(ex.InnerException ?? ex);
+					}
+					catch (Exception ex)
+					{
+						response = CreateResponse(ex);
+					}
+				}
+
+				response.WriteTo(clientStream, this.Serializer);
+			}
+			catch (Exception ex)
+			{
+				this.ReportUnhandledException?.Invoke(ex);
+			}
+		}
 
 		#endregion
 	}
