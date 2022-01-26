@@ -32,8 +32,9 @@ internal sealed class PipeClient : PipeBase
 		// Single-use connections are easier to reason about and manage the state for. They also give us
 		// a lot of freedom to swap in other transports later (e.g., Http, ZeroMQ, TcpClient/TcpListener) if desired.
 		// HTTP 1.0 used non-persistent connections, and it was fine for non-chatty interfaces.
-		using NamedPipeClientStream pipe = new(this.ServerName, this.PipeName, Direction, Options) { ReadMode = Mode };
+		using NamedPipeClientStream pipe = new(this.ServerName, this.PipeName, Direction, Options);
 		pipe.Connect(ConvertTimeout(connectTimeout));
+		pipe.ReadMode = Mode;
 		sendRequest(pipe);
 	}
 

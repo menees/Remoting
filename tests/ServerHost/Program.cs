@@ -3,11 +3,11 @@ using static System.Console;
 
 ExitCode exitCode = ExitCode.Default;
 
-const int RequiredArgCount = 3;
+const int RequiredArgCount = 5;
 
 if (args.Length != RequiredArgCount)
 {
-	exitCode = FataError(ExitCode.MissingArgs, $"Usage: {nameof(ServerHost)} AssemblyPath TypeName ServerPathPrefix");
+	exitCode = FataError(ExitCode.MissingArgs, $"Usage: {nameof(ServerHost)} AssemblyPath TypeName ServerPathPrefix Max Min");
 }
 else
 {
@@ -17,6 +17,9 @@ else
 
 	try
 	{
+		int maxListeners = int.Parse(args[3]);
+		int minListeners = int.Parse(args[4]);
+
 		AssemblyName assemblyName = AssemblyName.GetAssemblyName(assemblyPath);
 		Assembly assembly = Assembly.Load(assemblyName);
 		Type? serviceType = assembly.GetType(typeName);
@@ -36,12 +39,16 @@ else
 			{
 				Type serverType = typeof(RmiServer<>).MakeGenericType(interfaceType);
 
-				// TODO: Support max and min listeners. [Bill, 1/26/2022]
 				string serverPath = serverPathPrefix + "`TargetType";
 				object serviceInstance = Activator.CreateInstance(serviceType)!;
-				IRmiServer server = (IRmiServer)Activator.CreateInstance(serverType, serverPathPrefix, serviceInstance)!;
+				using IRmiServer server = (IRmiServer)Activator.CreateInstance(serverType, serverPathPrefix, serviceInstance, maxListeners, minListeners)!;
 
-				// TODO: Support known IServerHost interface with Shutdown method that disposes server. [Bill, 1/26/2022]
+				ServerHostManager manager = new();
+				using RmiServer<IServerHost> managerServer = new(serverPathPrefix + "`Manager", manager, 1);
+
+				server.Start();
+				managerServer.Start();
+				manager.WaitForShutdown();
 			}
 		}
 	}

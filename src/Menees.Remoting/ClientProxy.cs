@@ -6,7 +6,21 @@ using System.Reflection;
 
 #endregion
 
-internal sealed class ClientProxy<TServiceInterface> : DispatchProxy
+/// <summary>
+/// For internal use only by <see cref="RmiClient{TServiceInterface}"/>.
+/// </summary>
+/// <remarks>
+/// DispatchProxy.Create requires this type to be un-sealed.
+/// It's also required to be public until we can reference v6.0.0 of DispatchProxy containing fix 30917.
+/// As of Jan 26, 2022, v6.0.0 is still not publically available on NuGet even though the fix was supposedly
+/// in 6.0.0-preview.3.21152.1 as Mar 4, 2021 per AArnott. :-(
+/// https://github.com/dotnet/runtime/issues/30917
+///
+/// Note: Since this library is strongly-named, it can't used the InternalsVisibleTo("ProxyBuilder") hack.
+/// https://github.com/dotnet/runtime/issues/25595#issuecomment-546330898
+/// </remarks>
+/// <typeparam name="TServiceInterface"></typeparam>
+public class ClientProxy<TServiceInterface> : DispatchProxy
 	where TServiceInterface : class
 {
 	#region Private Data Members
@@ -17,9 +31,12 @@ internal sealed class ClientProxy<TServiceInterface> : DispatchProxy
 
 	#region Constructors
 
-	internal ClientProxy()
+	/// <summary>
+	/// Creates a new, uninitialized instance (i.e., it's not attached to an <see cref="RmiClient{TServiceInterface}"/> instance).
+	/// </summary>
+	public ClientProxy()
 	{
-		// Note: DispatchProxy requires a default constructor.
+		// Note: DispatchProxy.Create requires a public default constructor for this.
 	}
 
 	#endregion
@@ -35,6 +52,14 @@ internal sealed class ClientProxy<TServiceInterface> : DispatchProxy
 
 	#region Protected Methods
 
+	/// <summary>
+	/// Invokes a method through an associated <see cref="RmiClient{TServiceInterface}"/> instance.
+	/// </summary>
+	/// <param name="targetMethod"></param>
+	/// <param name="args"></param>
+	/// <returns></returns>
+	/// <exception cref="InvalidOperationException"></exception>
+	/// <exception cref="ArgumentNullException"></exception>
 	protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
 	{
 		if (this.client == null)
@@ -47,7 +72,7 @@ internal sealed class ClientProxy<TServiceInterface> : DispatchProxy
 			throw new ArgumentNullException(nameof(targetMethod));
 		}
 
-		object? result = this.Invoke(targetMethod, args ?? Array.Empty<object?>());
+		object? result = this.client.Invoke(targetMethod, args ?? Array.Empty<object?>());
 		return result;
 	}
 

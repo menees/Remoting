@@ -1,11 +1,5 @@
 ﻿namespace Menees.Remoting;
 
-#region Using Directives
-
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
-#endregion
-
 [TestClass]
 public class RmiServerTests
 {
