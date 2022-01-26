@@ -1,11 +1,10 @@
-﻿namespace Menees.Remoting
+﻿namespace Menees.Remoting;
+
+internal enum ListenerState
 {
-	internal enum ListenerState
-	{
-		WaitingForConnection,
-		Connected,
-		ProcessingRequest,
-		FinishedRequest,
-		Disposed,
-	}
+	WaitingForConnection,
+	Connected,
+	ProcessingRequest,
+	FinishedRequest,
+	Disposed,
 }

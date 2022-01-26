@@ -50,6 +50,25 @@
 		<AssemblyMetadata Condition="'$(BuildTime)' != ''" Include="BuildTime" Value="$(BuildTime)" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<!--
+			If we use <ImplicitUsings>enable</ImplicitUsings>, then it pulls in System.Net.Http, which requires another PackageReference.
+			Then we can't do <Using Remove="System.Net.Http" /> from this props file because Microsoft.NET.Sdk.CSharp.props is imported
+			after it, which does <Using Include="System.Net.Http" />! Since <Using> is in an ItemGroup, it would need to be overridden in a
+			csproj or targets file. So I'll avoid the ImplicitUsings property and just declare my own preferred global usings here.
+			https://rehansaeed.com/the-problem-with-csharp-10-implicit-usings/
+			https://github.com/dotnet/sdk/issues/19521#issuecomment-901372716
+			https://endjin.com/blog/2021/09/dotnet-csharp-10-implicit-global-using-directives
+		-->
+		<Using Include="System" />
+		<Using Include="System.Collections.Generic" />
+		<Using Include="System.IO" />
+		<Using Include="System.Linq" />
+		<Using Include="System.Text"/>
+		<Using Include="System.Threading" />
+		<Using Include="System.Threading.Tasks" />
+	</ItemGroup>
+
 	<ItemGroup Condition="$(UseCustomCodeAnalyzers)">
 		<PackageReference Include="codecracker.CSharp" Version="1.1.0">
 			<PrivateAssets>all</PrivateAssets>

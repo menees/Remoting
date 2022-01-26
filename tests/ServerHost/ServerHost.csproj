@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFrameworks>$(MeneesTargetNetCoreBase);$(MeneesTargetNetFramework)</TargetFrameworks>
+		<IsUnitTestProject>false</IsUnitTestProject>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\Menees.Remoting\Menees.Remoting.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="ServerHost"/>
+		<Using Include="Menees.Remoting" />
+	</ItemGroup>
+</Project>

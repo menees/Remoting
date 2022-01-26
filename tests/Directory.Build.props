@@ -10,9 +10,10 @@
 		<!-- https://github.com/microsoft/vstest/pull/2272 says $(ProjectDir) relative paths should work, but I can't get them to. -->
 		<!-- https://github.com/Microsoft/vstest/issues/605 says RunSettingsFilePath only accepts absolute paths. -->
 		<RunSettingsFilePath>$(SolutionDir)\tests\.runsettings</RunSettingsFilePath>
+		<IsUnitTestProject>true</IsUnitTestProject>
 	</PropertyGroup>
 
-	<ItemGroup>
+	<ItemGroup Condition="$(IsUnitTestProject)">
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
 		<PackageReference Include="MSTest.TestAdapter" Version="2.2.8" />
 		<PackageReference Include="MSTest.TestFramework" Version="2.2.8" />
