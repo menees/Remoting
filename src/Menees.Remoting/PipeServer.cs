@@ -75,13 +75,14 @@ internal sealed class PipeServer : PipeBase
 				}
 			}
 
-			int currentCount = this.listeners.Count;
-			if (currentCount < this.maxListeners)
+			int availableListeners = (this.maxListeners == NamedPipeServerStream.MaxAllowedServerInstances
+				? int.MaxValue : this.maxListeners) - this.listeners.Count;
+			if (availableListeners > 0)
 			{
 				int waitingCount = this.listeners.Count(listener => listener.State == ListenerState.WaitingForConnection);
 				if (waitingCount < this.minListeners)
 				{
-					int createCount = Math.Min(this.minListeners - waitingCount, this.maxListeners - currentCount);
+					int createCount = Math.Min(this.minListeners - waitingCount, availableListeners);
 					for (int i = 0; i < createCount; i++)
 					{
 						NamedPipeServerStream pipe = new(this.PipeName, Direction, this.maxListeners, Mode, Options);
