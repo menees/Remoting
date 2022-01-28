@@ -32,6 +32,7 @@ public class RmiClientTests
 			Tester tester = new();
 			using (RmiServer<ITester> server = new(serverPath, tester))
 			{
+				server.ReportUnhandledException = ex => Console.WriteLine("ERROR: Unhandled server exception: " + ex);
 				server.Start();
 
 				const int TestId = 123;

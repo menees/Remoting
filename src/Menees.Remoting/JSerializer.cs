@@ -29,7 +29,15 @@ internal sealed class JSerializer : ISerializer
 
 			// Send System.Type as an assembly-qualified type name.
 			new SystemTypeConverter(),
+
+			// Make sure we use the associated type when deserializing the value.
+			new TypedValueConverter(),
 		},
+
+		// Make sure ValueTuple serializes correctly since it uses public fields.
+		// https://stackoverflow.com/a/58139922/1882616
+		// https://github.com/dotnet/runtime/blob/main/src/libraries/System.Text.Json/src/System/Text/Json/Serialization/Metadata/JsonTypeInfo.cs#L253
+		IncludeFields = true,
 	};
 
 	#endregion
@@ -45,7 +53,6 @@ internal sealed class JSerializer : ISerializer
 
 	public byte[] Serialize(object? value, Type valueType)
 	{
-		// TODO: This doesn't handle ValueTuple serialization. (123,Int32) --> {} --> (null,null) [Bill, 1/27/2022]
 		string json = JsonSerializer.Serialize(value, valueType, SerializerOptions);
 		byte[] result = SerilizerEncoding.GetBytes(json);
 		return result;
