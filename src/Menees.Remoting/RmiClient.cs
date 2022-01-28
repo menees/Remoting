@@ -93,7 +93,7 @@ public sealed class RmiClient<TServiceInterface> : RmiBase<TServiceInterface>
 			response = Message.ReadFrom<Response>(stream, this.Serializer);
 		});
 
-		if (response != null && response.IsServiceException && response.ReturnValue is Exception ex)
+		if (response != null && response.IsServiceException && response.Result?.Value is Exception ex)
 		{
 			// Try to throw a new exception of the same type so the outer exception's StackTrace will be from the client,
 			// and the inner exception's StackTrace will be from the server.
@@ -110,7 +110,7 @@ public sealed class RmiClient<TServiceInterface> : RmiBase<TServiceInterface>
 			}
 		}
 
-		object? result = response?.ReturnValue;
+		object? result = response?.Result?.Value;
 		return result;
 	}
 
@@ -135,7 +135,7 @@ public sealed class RmiClient<TServiceInterface> : RmiBase<TServiceInterface>
 	private static Request CreateRequest(MethodInfo targetMethod, object?[] args)
 	{
 		int argCount = args.Length;
-		List<(object? Value, Type DataType)> arguments = new(argCount);
+		List<TypedValue> arguments = new(argCount);
 		ParameterInfo[]? parameters = null;
 
 		for (int i = 0; i < argCount; i++)
@@ -152,7 +152,7 @@ public sealed class RmiClient<TServiceInterface> : RmiBase<TServiceInterface>
 			}
 
 			dataType ??= typeof(object);
-			arguments.Add((value, dataType));
+			arguments.Add(new() { Value = value, Type = dataType });
 		}
 
 		Request request = new()

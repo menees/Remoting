@@ -2,9 +2,7 @@
 
 internal sealed class Response : Message
 {
-	public object? ReturnValue { get; set; }
-
-	public Type? ReturnType { get; set; }
+	public TypedValue? Result { get; set; }
 
 	/// <summary>
 	/// Gets whether the <see cref="ReturnValue"/> is an exception that was thrown by

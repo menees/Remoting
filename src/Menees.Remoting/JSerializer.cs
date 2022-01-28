@@ -134,6 +134,8 @@ internal sealed class JSerializer : ISerializer
 
 	private sealed class SystemTypeConverter : JsonConverter<Type>
 	{
+		#region Public Methods
+
 		public override Type? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 		{
 			// There's a security concern here. Someone can pass in JSON to force a rouge assembly and type to be loaded.
@@ -147,6 +149,35 @@ internal sealed class JSerializer : ISerializer
 		{
 			writer.WriteStringValue(value.AssemblyQualifiedName);
 		}
+
+		#endregion
+	}
+
+	private sealed class TypedValueConverter : JsonConverter<TypedValue>
+	{
+		#region Public Methods
+
+		public override TypedValue? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+		{
+			// TODO: Finish Read of TypedValue JSON. [Bill, 1/27/2022]
+			return null;
+		}
+
+		public override void Write(Utf8JsonWriter writer, TypedValue value, JsonSerializerOptions options)
+		{
+			writer.WriteStartObject();
+
+			// This will use SystemTypeConverter to write the Type.
+			writer.WritePropertyName(nameof(value.Type));
+			JsonSerializer.Serialize(writer, value.Type, typeof(Type), options);
+
+			writer.WritePropertyName(nameof(value.Value));
+			JsonSerializer.Serialize(writer, value.Value, value.Type, options);
+
+			writer.WriteEndObject();
+		}
+
+		#endregion
 	}
 
 	#endregion

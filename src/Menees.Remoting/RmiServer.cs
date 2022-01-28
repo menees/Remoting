@@ -95,8 +95,11 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 		Response response = new()
 		{
 			IsServiceException = true,
-			ReturnValue = ex,
-			ReturnType = ex.GetType(),
+			Result = new TypedValue
+			{
+				Value = ex,
+				Type = ex.GetType(),
+			},
 		};
 
 		return response;
@@ -121,15 +124,18 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 			}
 			else
 			{
-				IEnumerable<(object? Value, Type DataType)> args = request.Arguments ?? Enumerable.Empty<(object? Value, Type DataType)>();
+				IEnumerable<TypedValue> args = request.Arguments ?? Enumerable.Empty<TypedValue>();
 				object? methodResult;
 				try
 				{
 					methodResult = method.Invoke(target, args.Select(tuple => tuple.Value).ToArray());
 					response = new Response
 					{
-						ReturnValue = methodResult,
-						ReturnType = methodResult?.GetType() ?? method.ReturnType,
+						Result = new TypedValue
+						{
+							Value = methodResult,
+							Type = methodResult?.GetType() ?? method.ReturnType,
+						},
 					};
 				}
 				catch (TargetInvocationException ex)
