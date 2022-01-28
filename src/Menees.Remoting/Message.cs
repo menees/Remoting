@@ -7,17 +7,26 @@ internal abstract class Message
 	public static T ReadFrom<T>(Stream stream, ISerializer serializer)
 		where T : Message
 	{
-		// The message length is always written in little endian order.
-		byte[] messageLength = ReadExactly(stream, sizeof(int));
-		if (!BitConverter.IsLittleEndian)
+		if (!TryRead(stream, sizeof(int), out byte[] buffer))
 		{
-			Array.Reverse(messageLength);
+			throw new ArgumentException(
+				$"Unable to read {sizeof(int)} byte message length from stream. Only {buffer.Length} bytes were available.");
 		}
 
-		int length = BitConverter.ToInt32(messageLength, 0);
-		byte[] message = ReadExactly(stream, length);
+		// The message length is always written in little endian order.
+		if (!BitConverter.IsLittleEndian)
+		{
+			Array.Reverse(buffer);
+		}
 
-		T result = (T?)serializer.Deserialize(message, typeof(T))
+		int length = BitConverter.ToInt32(buffer, 0);
+		if (!TryRead(stream, length, out buffer))
+		{
+			throw new ArgumentException(
+				$"Unable to read {length} byte message from stream. Only {buffer.Length} bytes were available.");
+		}
+
+		T result = (T?)serializer.Deserialize(buffer, typeof(T))
 			?? throw new ArgumentNullException($"{typeof(T).Name} message cannot be null.");
 
 		return result;
@@ -45,20 +54,32 @@ internal abstract class Message
 
 	#region Private Methods
 
-	private static byte[] ReadExactly(Stream stream, int requiredCount)
+	private static bool TryRead(Stream stream, int requiredCount, out byte[] data)
 	{
-		byte[] result = new byte[requiredCount];
+		data = new byte[requiredCount];
+
 		int totalCount = 0;
 		while (totalCount < requiredCount)
 		{
-			int readCount = stream.Read(result, totalCount, requiredCount - totalCount);
+			// Read blocks until data arrives. Typically, it returns the exact amount we request (once
+			// a writer pushes that into the stream). Theoretically, it could return less and then make
+			// more data available on the next call. So we'll loop until the stream runs out (i.e., is closed
+			// by the writer) or until we get what we want. https://stackoverflow.com/a/46797865/1882616
+			int readCount = stream.Read(data, totalCount, requiredCount - totalCount);
 			if (readCount <= 0)
 			{
-				throw new ArgumentException(
-					$"Unable to read {requiredCount} bytes from stream. Only {totalCount} bytes were available.");
+				break;
 			}
 
 			totalCount += readCount;
+		}
+
+		bool result = totalCount == requiredCount;
+		if (!result)
+		{
+			// We don't want to give back an array that's too long, and we want the caller to know exactly
+			// what (and how much) we received. This should be very rare and only in error conditions.
+			Array.Resize(ref data, totalCount);
 		}
 
 		return result;

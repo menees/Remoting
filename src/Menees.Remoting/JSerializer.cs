@@ -26,6 +26,9 @@ internal sealed class JSerializer : ISerializer
 
 			// Deserialize scalar Object values by inferring a preferred type instead of always returning JsonElement.
 			new ScalarObjectConverter(),
+
+			// Send System.Type as an assembly-qualified type name.
+			new SystemTypeConverter(),
 		},
 	};
 
@@ -42,6 +45,7 @@ internal sealed class JSerializer : ISerializer
 
 	public byte[] Serialize(object? value, Type valueType)
 	{
+		// TODO: This doesn't handle ValueTuple serialization. (123,Int32) --> {} --> (null,null) [Bill, 1/27/2022]
 		string json = JsonSerializer.Serialize(value, valueType, SerializerOptions);
 		byte[] result = SerilizerEncoding.GetBytes(json);
 		return result;
@@ -126,6 +130,23 @@ internal sealed class JSerializer : ISerializer
 		}
 
 		#endregion
+	}
+
+	private sealed class SystemTypeConverter : JsonConverter<Type>
+	{
+		public override Type? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+		{
+			// There's a security concern here. Someone can pass in JSON to force a rouge assembly and type to be loaded.
+			// https://stackoverflow.com/a/66963611/1882616
+			string? assemblyQualifiedName = reader.GetString();
+			Type? result = assemblyQualifiedName != null ? Type.GetType(assemblyQualifiedName) : null;
+			return result;
+		}
+
+		public override void Write(Utf8JsonWriter writer, Type value, JsonSerializerOptions options)
+		{
+			writer.WriteStringValue(value.AssemblyQualifiedName);
+		}
 	}
 
 	#endregion

@@ -104,22 +104,28 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 
 	private void ProcessRequest(Stream clientStream)
 	{
+		Response response;
+
 		try
 		{
 			Request request = Message.ReadFrom<Request>(clientStream, this.Serializer);
-			Response response;
 
 			if (!MethodSignatureCache.TryGetValue(request.MethodSignature ?? string.Empty, out MethodInfo? method))
 			{
 				response = CreateResponse(new TargetException(
 					$"A {typeof(TServiceInterface).FullName} method with signature '{request.MethodSignature}' was not found."));
 			}
+			else if (this.serviceInstance is not object target)
+			{
+				response = CreateResponse(new ObjectDisposedException(this.GetType().FullName));
+			}
 			else
 			{
 				IEnumerable<(object? Value, Type DataType)> args = request.Arguments ?? Enumerable.Empty<(object? Value, Type DataType)>();
+				object? methodResult;
 				try
 				{
-					object? methodResult = method.Invoke(this.serviceInstance, args.Select(tuple => tuple.Value).ToArray());
+					methodResult = method.Invoke(target, args.Select(tuple => tuple.Value).ToArray());
 					response = new Response
 					{
 						ReturnValue = methodResult,
@@ -128,21 +134,33 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 				}
 				catch (TargetInvocationException ex)
 				{
-					// The inner exception is typically the original exception thrown by the invoked method.
+					// The inner exception is the original exception thrown by the invoked method.
 					response = CreateResponse(ex.InnerException ?? ex);
+					methodResult = null;
 				}
-				catch (Exception ex)
-				{
-					response = CreateResponse(ex);
-				}
-			}
 
-			response.WriteTo(clientStream, this.Serializer);
+				// The inner try..catch for Invoke only handles TargetInvocationException so any exceptions from
+				// invalid request arguments or from trying to serialize methodResult will pass through the
+				// ReportUnhandledException action below before being returned.
+			}
 		}
 		catch (Exception ex)
 		{
 			this.ReportUnhandledException?.Invoke(ex);
+
+			try
+			{
+				// Try to serialize the original exception.
+				response = CreateResponse(ex);
+			}
+			catch (Exception ex2)
+			{
+				// If we couldn't serialize the original exception, try to return a simple exception with just the messages.
+				response = CreateResponse(new InvalidOperationException(string.Join(Environment.NewLine, ex.Message, ex2.Message)));
+			}
 		}
+
+		response.WriteTo(clientStream, this.Serializer);
 	}
 
 	#endregion

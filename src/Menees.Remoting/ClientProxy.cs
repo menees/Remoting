@@ -13,9 +13,9 @@ using System.Reflection;
 /// DispatchProxy.Create requires this type to be un-sealed.
 /// It's also required to be public until we can reference v6.0.0 of DispatchProxy containing fix 30917.
 /// As of Jan 26, 2022, v6.0.0 is still not publically available on NuGet even though the fix was supposedly
-/// in 6.0.0-preview.3.21152.1 as Mar 4, 2021 per AArnott. :-(
+/// in 6.0.0-preview.3.21152.1 as of Mar 4, 2021 per AArnott. :-(
 /// https://github.com/dotnet/runtime/issues/30917
-///
+/// <para/>
 /// Note: Since this library is strongly-named, it can't used the InternalsVisibleTo("ProxyBuilder") hack.
 /// https://github.com/dotnet/runtime/issues/25595#issuecomment-546330898
 /// </remarks>

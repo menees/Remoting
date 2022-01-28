@@ -36,7 +36,8 @@ public class RmiClientTests
 
 				const int TestId = 123;
 				testerProxy.TestId = TestId;
-				testerProxy.TestId.ShouldBe(TestId);
+				int actualTestId = testerProxy.TestId;
+				actualTestId.ShouldBe(TestId);
 
 				testerProxy.Combine("A", "B").ShouldBe("AB");
 				testerProxy.Combine("A", "B", "C").ShouldBe("ABC");

@@ -85,6 +85,7 @@ internal sealed class PipeServer : PipeBase
 					int createCount = Math.Min(this.minListeners - waitingCount, availableListeners);
 					for (int i = 0; i < createCount; i++)
 					{
+						// Pass the actual maxListeners value to the new pipe since it's externally visible using SysInternals' PipeList.
 						NamedPipeServerStream pipe = new(this.PipeName, Direction, this.maxListeners, Mode, Options);
 						PipeServerListener listener = new(this, pipe);
 						this.listeners.Add(listener);
