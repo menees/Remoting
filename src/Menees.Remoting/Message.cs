@@ -26,6 +26,7 @@ internal abstract class Message
 				$"Unable to read {length} byte message from stream. Only {buffer.Length} bytes were available.");
 		}
 
+		// TODO: Use JSerializer to handle internal Message and TypedValue types. Use serializer for payload.[Bill, 1/27/2022]
 		T result = (T?)serializer.Deserialize(buffer, typeof(T))
 			?? throw new ArgumentNullException($"{typeof(T).Name} message cannot be null.");
 
@@ -34,6 +35,7 @@ internal abstract class Message
 
 	public void WriteTo(Stream stream, ISerializer serializer)
 	{
+		// TODO: Use JSerializer to handle internal Message and TypedValue types. Use serializer for payload.[Bill, 1/27/2022]
 		byte[] message = serializer.Serialize(this, this.GetType());
 
 		// Always write the message length bytes in little endian order since that's Intel's

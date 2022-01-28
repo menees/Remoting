@@ -159,8 +159,28 @@ internal sealed class JSerializer : ISerializer
 
 		public override TypedValue? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 		{
-			// TODO: Finish Read of TypedValue JSON. [Bill, 1/27/2022]
-			return null;
+			if (reader.TokenType == JsonTokenType.StartObject
+				&& reader.Read()
+				&& reader.TokenType == JsonTokenType.PropertyName
+				&& reader.GetString() == nameof(TypedValue.Type)
+				&& reader.Read())
+			{
+				Type? dataType = (Type?)JsonSerializer.Deserialize(ref reader, typeof(Type), options);
+				if (dataType != null && reader.Read())
+				{
+					TypedValue typedValue = new() { Type = dataType };
+					if ((reader.TokenType == JsonTokenType.EndObject)
+						|| (reader.TokenType == JsonTokenType.PropertyName
+						&& reader.GetString() == nameof(typedValue.Value)
+						&& reader.Read()))
+					{
+						typedValue.Value = JsonSerializer.Deserialize(ref reader, typedValue.Type, options);
+						return typedValue;
+					}
+				}
+			}
+
+			throw new JsonException($"Invalid {nameof(TypedValue)} JSON");
 		}
 
 		public override void Write(Utf8JsonWriter writer, TypedValue value, JsonSerializerOptions options)
