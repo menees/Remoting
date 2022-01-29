@@ -47,10 +47,28 @@ internal sealed class PipeServerListener : IDisposable
 
 			if (this.pipe.IsConnected)
 			{
-				this.pipe.Disconnect();
+				this.server.LogTrace("Disconnecting listener.");
+				try
+				{
+					this.pipe.Disconnect();
+				}
+				catch (Exception ex)
+				{
+					this.server.LogTrace("EXCEPTION Disconnecting listener."); // TODO: Log error. [Bill, 1/29/2022]
+					ex.GetHashCode();
+				}
 			}
 
-			this.pipe.Dispose();
+			this.server.LogTrace("Disposing listener.");
+			try
+			{
+				this.pipe.Dispose();
+			}
+			catch (Exception ex)
+			{
+				this.server.LogTrace("EXCEPTION Disposing listener."); // TODO: Log error. [Bill, 1/29/2022]
+				ex.GetHashCode();
+			}
 		}
 	}
 
@@ -70,6 +88,7 @@ internal sealed class PipeServerListener : IDisposable
 
 			// Since this listener is now connected (and about to begin processing a request), tell the server so it
 			// can start another listener if necessary. If the server is already at its max, it may not be able to.
+			this.server.LogTrace("Listener Connected");
 			this.server.EnsureMinListeners();
 
 			// Process the incoming request on a pool thread using a background task.
@@ -100,6 +119,8 @@ internal sealed class PipeServerListener : IDisposable
 	{
 		if (!this.disposed)
 		{
+			this.server.LogTrace("Stopping listener.");
+
 			this.State = ListenerState.FinishedRequest;
 
 			// Try to ensure any task exception is observed. This shouldn't occur if ProcessRequest
@@ -125,6 +146,7 @@ internal sealed class PipeServerListener : IDisposable
 			// If it was at its max earlier when we started processing, then maybe now
 			// that we're finished it'll be below the max (unless another thread snuck in
 			// and started a new listener).
+			this.server.LogTrace($"After Listener Dispose");
 			this.server.EnsureMinListeners();
 		}
 	}

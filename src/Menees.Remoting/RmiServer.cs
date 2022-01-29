@@ -4,6 +4,8 @@
 
 using System.IO.Pipes;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 #endregion
 
@@ -39,18 +41,22 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 	/// <param name="serializer">An optional custom serializer.
 	/// Note: All connecting <see cref="RmiClient{TServiceInterface}"/> instances must use a compatible serializer.
 	/// </param>
+	/// <param name="logger">An optional logger for server status information.</param>
 	public RmiServer(
 		string serverPath,
 		TServiceInterface serviceInstance,
 		int maxListeners = NamedPipeServerStream.MaxAllowedServerInstances,
 		int minListeners = 1,
-		ISerializer? serializer = null)
+		ISerializer? serializer = null,
+		ILogger? logger = null)
 		: base(serializer)
 	{
 		this.serviceInstance = serviceInstance;
 
 		// Note: The pipe is created with no listeners until we explicitly start them.
-		this.pipe = new(serverPath, minListeners, maxListeners, this.ProcessRequest);
+		this.pipe = new(serverPath, minListeners, maxListeners, this.ProcessRequest, logger ?? NullLogger.Instance);
+
+		// TODO: Use logger for default ReportUnhandledException behavior. [Bill, 1/29/2022]
 	}
 
 	#endregion

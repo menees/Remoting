@@ -33,8 +33,6 @@ internal abstract class PipeBase : IDisposable
 
 	protected static PipeDirection Direction => PipeDirection.InOut;
 
-	protected static PipeOptions Options => PipeOptions.Asynchronous;
-
 	/// <summary>
 	/// Message mode is only supported on Windows, so we'll use Byte mode and frame each "message" manually.
 	/// </summary>

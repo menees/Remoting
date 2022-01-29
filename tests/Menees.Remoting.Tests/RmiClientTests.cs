@@ -56,5 +56,11 @@ public class RmiClientTests
 		}
 	}
 
+	[TestMethod]
+	public void ThrowException()
+	{
+		// TODO: Finish ThrowException test. [Bill, 1/29/2022]
+	}
+
 	#endregion
 }
