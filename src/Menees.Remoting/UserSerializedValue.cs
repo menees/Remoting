@@ -20,7 +20,10 @@ internal sealed class UserSerializedValue
 	{
 		this.DataType = dataType;
 		this.SerializerId = userSerializer.GetType().AssemblyQualifiedName;
-		this.SerializedValue = userSerializer.Serialize(value, dataType);
+		if (dataType != typeof(void))
+		{
+			this.SerializedValue = userSerializer.Serialize(value, dataType);
+		}
 	}
 
 	#endregion
