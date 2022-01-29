@@ -2,15 +2,14 @@
 
 internal sealed class Response : Message
 {
-	public TypedValue? Result { get; set; }
+	public UserSerializedValue? Result { get; set; }
 
 	/// <summary>
-	/// Gets whether the <see cref="ReturnValue"/> is an exception that was thrown by
-	/// the remote server method.
+	/// Gets any exception that was thrown by the remote server method.
 	/// </summary>
 	/// <remarks>
-	/// If this is true, then the client should rethrow the exception rather than returning
-	/// the value as a normal result.
+	/// If this is non-null, then the client should throw a new exception rather than treating
+	/// <see cref="Result"/> as a normal value that's safe to deserialize.
 	/// </remarks>
-	public bool IsServiceException { get; set; }
+	public ServiceError? Error { get; set; }
 }

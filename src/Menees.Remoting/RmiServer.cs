@@ -92,16 +92,7 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 
 	private static Response CreateResponse(Exception ex)
 	{
-		Response response = new()
-		{
-			IsServiceException = true,
-			Result = new TypedValue
-			{
-				Value = ex,
-				Type = ex.GetType(),
-			},
-		};
-
+		Response response = new() { Error = new(ex) };
 		return response;
 	}
 
@@ -111,7 +102,7 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 
 		try
 		{
-			Request request = Message.ReadFrom<Request>(clientStream, this.Serializer);
+			Request request = Message.ReadFrom<Request>(clientStream, this.SystemSerializer);
 
 			if (!MethodSignatureCache.TryGetValue(request.MethodSignature ?? string.Empty, out MethodInfo? method))
 			{
@@ -124,19 +115,14 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 			}
 			else
 			{
-				IEnumerable<TypedValue> args = request.Arguments ?? Enumerable.Empty<TypedValue>();
+				IEnumerable<UserSerializedValue> serializedArgs = request.Arguments ?? Enumerable.Empty<UserSerializedValue>();
+				object?[] args = serializedArgs.Select(arg => arg.DeserializeValue(this.UserSerializer)).ToArray();
 				object? methodResult;
 				try
 				{
-					methodResult = method.Invoke(target, args.Select(tuple => tuple.Value).ToArray());
-					response = new Response
-					{
-						Result = new TypedValue
-						{
-							Value = methodResult,
-							Type = methodResult?.GetType() ?? method.ReturnType,
-						},
-					};
+					methodResult = method.Invoke(target, args);
+					Type returnType = methodResult?.GetType() ?? method.ReturnType;
+					response = new Response { Result = new UserSerializedValue(returnType, methodResult, this.UserSerializer) };
 				}
 				catch (TargetInvocationException ex)
 				{
@@ -156,17 +142,17 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 
 			try
 			{
-				// Try to serialize the original exception.
+				// Try to report the original exception.
 				response = CreateResponse(ex);
 			}
 			catch (Exception ex2)
 			{
-				// If we couldn't serialize the original exception, try to return a simple exception with just the messages.
+				// If we couldn't serialize the original exception, try to return a simple error with just the messages.
 				response = CreateResponse(new InvalidOperationException(string.Join(Environment.NewLine, ex.Message, ex2.Message)));
 			}
 		}
 
-		response.WriteTo(clientStream, this.Serializer);
+		response.WriteTo(clientStream, this.SystemSerializer);
 	}
 
 	#endregion

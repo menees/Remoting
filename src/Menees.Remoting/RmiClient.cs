@@ -84,33 +84,17 @@ public sealed class RmiClient<TServiceInterface> : RmiBase<TServiceInterface>
 
 	internal object? Invoke(MethodInfo targetMethod, object?[] args)
 	{
-		Request request = CreateRequest(targetMethod, args);
+		Request request = this.CreateRequest(targetMethod, args);
 
 		Response? response = null;
 		this.pipe.SendRequest(this.ConnectTimeout, stream =>
 		{
-			request.WriteTo(stream, this.Serializer);
-			response = Message.ReadFrom<Response>(stream, this.Serializer);
+			request.WriteTo(stream, this.SystemSerializer);
+			response = Message.ReadFrom<Response>(stream, this.SystemSerializer);
 		});
 
-		if (response != null && response.IsServiceException && response.Result?.Value is Exception ex)
-		{
-			// Try to throw a new exception of the same type so the outer exception's StackTrace will be from the client,
-			// and the inner exception's StackTrace will be from the server.
-			Type exceptionType = ex.GetType();
-			ConstructorInfo? constructor = exceptionType.GetConstructor(new[] { typeof(string), typeof(Exception) });
-			if (constructor != null)
-			{
-				throw (Exception)constructor.Invoke(new object?[] { ex.Message, ex });
-			}
-			else
-			{
-				// We have to rethrow the returned service exception, so this will not preserve the server's StackTrace.
-				throw ex;
-			}
-		}
-
-		object? result = response?.Result?.Value;
+		response?.Error?.ThrowException();
+		object? result = response?.Result?.DeserializeValue(this.UserSerializer);
 		return result;
 	}
 
@@ -132,10 +116,10 @@ public sealed class RmiClient<TServiceInterface> : RmiBase<TServiceInterface>
 
 	#region Private Methods
 
-	private static Request CreateRequest(MethodInfo targetMethod, object?[] args)
+	private Request CreateRequest(MethodInfo targetMethod, object?[] args)
 	{
 		int argCount = args.Length;
-		List<TypedValue> arguments = new(argCount);
+		List<UserSerializedValue> arguments = new(argCount);
 		ParameterInfo[]? parameters = null;
 
 		for (int i = 0; i < argCount; i++)
@@ -152,7 +136,7 @@ public sealed class RmiClient<TServiceInterface> : RmiBase<TServiceInterface>
 			}
 
 			dataType ??= typeof(object);
-			arguments.Add(new() { Value = value, Type = dataType });
+			arguments.Add(new UserSerializedValue(dataType, value, this.UserSerializer));
 		}
 
 		Request request = new()

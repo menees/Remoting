@@ -3,6 +3,7 @@
 #region Using Directives
 
 using System.Reflection;
+using Menees.Remoting.Json;
 
 #endregion
 
@@ -15,8 +16,10 @@ public abstract class RmiBase<TServiceInterface> : IDisposable
 {
 	#region Protected Data Members
 
-	private static readonly ISerializer DefaultSerializer = new JSerializer();
 	private bool disposed;
+	private Func<string, Type?> tryGetType = RequireGetType;
+	private ISerializer? systemSerializer;
+	private ISerializer? userSerializer;
 
 	#endregion
 
@@ -33,14 +36,58 @@ public abstract class RmiBase<TServiceInterface> : IDisposable
 			throw new ArgumentException($"{nameof(TServiceInterface)} {interfaceType.FullName} must be an interface type.");
 		}
 
-		this.Serializer = serializer ?? DefaultSerializer;
+		this.userSerializer = serializer;
+	}
+
+	#endregion
+
+	#region Public Properties
+
+	/// <summary>
+	/// Allows customization of how an assembly-qualified type name (serialized from
+	/// <see cref="Type.AssemblyQualifiedName"/>) should be deserialized into a .NET
+	/// <see cref="Type"/>.
+	/// </summary>
+	/// <remarks>
+	/// A secure system needs to support a known list of legal/safe/valid types that it
+	/// can load dynamically. It shouldn't just trust and load an arbitrary assembly and
+	/// then load an arbitrary type out of it. Doing that can execute malicious code
+	/// in the current process (e.g., via the Type's static constructor or the assembly's
+	/// module initializer). So a security best practice is to validate every assembly-
+	/// qualified type name before you load the type.
+	/// <para/>
+	/// However, this is a case where security is at odds with convenience. The default for
+	/// this property just calls <see cref="Type.GetType(string, bool)"/> to try to load the type,
+	/// and it throws an exception if the type can't be loaded.
+	/// <para/>
+	/// https://github.com/dotnet/runtime/issues/31567#issuecomment-558335944
+	/// https://stackoverflow.com/a/66963611/1882616
+	/// https://github.com/dotnet/runtime/issues/43482#issue-722814247 (related Exception comment)
+	/// </remarks>
+	public Func<string, Type?> TryGetType
+	{
+		get => this.tryGetType;
+		set
+		{
+			if (this.tryGetType != value)
+			{
+				this.tryGetType = value;
+
+				// On the next serialization, we need to create a new serializer instance using the new tryGetType lambda.
+				this.systemSerializer = null;
+			}
+		}
 	}
 
 	#endregion
 
 	#region Protected Properties
 
-	private protected ISerializer Serializer { get; private set; }
+	private protected ISerializer SystemSerializer
+		=> this.systemSerializer ??= new JSerializer(new(this.tryGetType));
+
+	private protected ISerializer UserSerializer
+		=> this.userSerializer ?? this.SystemSerializer;
 
 	#endregion
 
@@ -69,7 +116,8 @@ public abstract class RmiBase<TServiceInterface> : IDisposable
 		if (!this.disposed)
 		{
 			// Allow any custom serializer to be GCed.
-			this.Serializer = null!;
+			this.userSerializer = null;
+			this.systemSerializer = null;
 			this.disposed = true;
 		}
 	}
@@ -87,6 +135,13 @@ public abstract class RmiBase<TServiceInterface> : IDisposable
 		string result = methodInfo.ToString() ?? throw new InvalidOperationException("Null method signature is not supported.");
 		return result;
 	}
+
+	#endregion
+
+	#region Private Methods
+
+	private static Type? RequireGetType(string qualifiedTypeName)
+		=> Type.GetType(qualifiedTypeName, throwOnError: true);
 
 	#endregion
 }
