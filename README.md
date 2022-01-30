@@ -16,5 +16,5 @@ It uses named pipes and a serializer of your choice (default is System.Text.Json
 Note: This doesn't 'target .NET Standard 2.0 because [DispatchProxy.Create](https://docs.microsoft.com/en-us/dotnet/api/system.reflection.dispatchproxy.create)
 isn't supported there (due to lack of [Reflection.Emit](https://docs.microsoft.com/en-us/dotnet/api/system.reflection.emit) support in .NET Standard 2.0).
 
-TODO: Add examples.
-TODO: Explain that non-chatty interfaces are best. Can't return a reference; only (serialized) values returned.
+DOC: Add examples.
+DOC: Explain that non-chatty interfaces are best. Can't return a reference; only (serialized) values returned.

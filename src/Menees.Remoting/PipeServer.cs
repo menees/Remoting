@@ -68,6 +68,7 @@ internal sealed class PipeServer : PipeBase
 
 	#region Private Properties
 
+	// TODO: This seems crazy. .NET 6 should use PipeOptions.Asynchronous too. [Bill, 1/29/2022]
 	// .NET Framework requires the Asynchronous option in order to call BeginWaitForConnection in the listener,
 	// and everything works correctly in the server even though the client is synchronous.
 	//
@@ -81,11 +82,19 @@ internal sealed class PipeServer : PipeBase
 	#region Internal Methods
 
 	internal void LogTrace(string? message, params object?[] args)
+		=> this.Log(LogLevel.Trace, null, message, args);
+
+	internal void Log(LogLevel logLevel, Exception? ex, string? message, params object?[] args)
 	{
 		// TODO: Use a static template expression. [Bill, 1/29/2022]
 #pragma warning disable CA2254 // Template should be a static expression.
-		this.logger.LogTrace(message, args);
+		this.logger.Log(logLevel, ex, message, args);
 #pragma warning restore CA2254 // Template should be a static expression
+
+		if (ex != null)
+		{
+			this.ReportUnhandledException?.Invoke(ex);
+		}
 	}
 
 	internal void EnsureMinListeners()
@@ -93,7 +102,7 @@ internal sealed class PipeServer : PipeBase
 		this.LogTrace("About to request server listener lock.");
 		lock (this.listeners)
 		{
-			this.LogTrace("Initial Listeners: {Count}", this.listeners.Count);
+			this.LogTrace("Initial listeners: {Count}", this.listeners.Count);
 
 			// Make a list copy of the hashset since we may need to remove members from the hashset.
 			foreach (PipeServerListener listener in this.listeners.ToList())
@@ -105,21 +114,20 @@ internal sealed class PipeServer : PipeBase
 				}
 			}
 
-			// TODO: Fix inconsistent capitalization. [Bill, 1/29/2022]
-			this.LogTrace("Non-Disposed Listeners: {Count}", this.listeners.Count);
+			this.LogTrace("Non-disposed listeners: {Count}", this.listeners.Count);
 
 			int availableListeners = (this.maxListeners == NamedPipeServerStream.MaxAllowedServerInstances
 				? int.MaxValue : this.maxListeners) - this.listeners.Count;
 
-			this.LogTrace("Available Listeners: {Count}", availableListeners);
+			this.LogTrace("Available listeners: {Count}", availableListeners);
 			if (availableListeners > 0)
 			{
 				int waitingCount = this.listeners.Count(listener => listener.State == ListenerState.WaitingForConnection);
-				this.LogTrace("Waiting Listeners: {Count}", waitingCount);
+				this.LogTrace("Waiting listeners: {Count}", waitingCount);
 				if (waitingCount < this.minListeners)
 				{
 					int createCount = Math.Min(this.minListeners - waitingCount, availableListeners);
-					this.LogTrace("Create Listeners: {Count}", createCount);
+					this.LogTrace("Create listeners: {Count}", createCount);
 					for (int i = 0; i < createCount; i++)
 					{
 						// Pass the actual maxListeners value to the new pipe since it's externally visible using SysInternals' PipeList.

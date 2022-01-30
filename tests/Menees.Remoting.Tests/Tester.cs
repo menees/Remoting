@@ -22,6 +22,16 @@ internal class Tester : ITester
 		return result;
 	}
 
+	public int ThrowExceptionIfOdd(int evenNumber)
+	{
+		if (evenNumber % 2 != 0)
+		{
+			throw new ArgumentOutOfRangeException(nameof(evenNumber), "Only even numbers are supported.");
+		}
+
+		return evenNumber / 2;
+	}
+
 	public Widget UpdateWidget(Widget widget, string? newName, decimal? newCost, int[]? newDimensions)
 	{
 		if (newName != null)

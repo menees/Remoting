@@ -1,5 +1,8 @@
 ﻿namespace Menees.Remoting;
 
+// TODO: Make all stream usage in Message use async. [Bill, 1/29/2022]
+// Toub says use ConfigureAwait(false) everywhere and "return Lib.FooAsync().Result" is ok.
+// https://devblogs.microsoft.com/pfxteam/should-i-expose-synchronous-wrappers-for-asynchronous-methods/
 internal abstract class Message
 {
 	#region Public Methods

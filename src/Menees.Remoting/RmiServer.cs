@@ -48,13 +48,13 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 		int maxListeners = NamedPipeServerStream.MaxAllowedServerInstances,
 		int minListeners = 1,
 		ISerializer? serializer = null,
-		ILogger? logger = null)
+		ILogger<RmiServer<TServiceInterface>>? logger = null)
 		: base(serializer)
 	{
 		this.serviceInstance = serviceInstance;
 
 		// Note: The pipe is created with no listeners until we explicitly start them.
-		this.pipe = new(serverPath, minListeners, maxListeners, this.ProcessRequest, logger ?? NullLogger.Instance);
+		this.pipe = new(serverPath, minListeners, maxListeners, this.ProcessRequest, logger ?? (ILogger)NullLogger.Instance);
 
 		// TODO: Use logger for default ReportUnhandledException behavior. [Bill, 1/29/2022]
 	}

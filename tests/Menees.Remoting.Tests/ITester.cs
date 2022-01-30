@@ -9,4 +9,6 @@ internal interface ITester
 	Widget CreateWidget(string name, decimal cost, params int[] dimensions);
 
 	Widget UpdateWidget(Widget widget, string? newName, decimal? newCost, int[]? newDimensions);
+
+	int ThrowExceptionIfOdd(int evenNumber);
 }
