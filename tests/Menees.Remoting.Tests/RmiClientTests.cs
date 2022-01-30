@@ -22,14 +22,14 @@ public class RmiClientTests
 	[TestMethod]
 	public void CreateProxyTest()
 	{
-		string serverPath = nameof(this.CreateProxyTest);
+		const string ServerPath = nameof(this.CreateProxyTest);
 
-		using RmiClient<ITester> client = new(serverPath, connectTimeout: TimeSpan.FromSeconds(2));
+		using RmiClient<ITester> client = new(ServerPath, connectTimeout: TimeSpan.FromSeconds(2));
 		ITester testerProxy = client.CreateProxy();
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(serverPath, tester);
+		using RmiServer<ITester> server = new(ServerPath, tester);
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 
@@ -55,14 +55,14 @@ public class RmiClientTests
 	[TestMethod]
 	public void ThrowException()
 	{
-		string serverPath = nameof(this.ThrowException);
+		const string ServerPath = nameof(this.ThrowException);
 
-		using RmiClient<ITester> client = new(serverPath);
+		using RmiClient<ITester> client = new(ServerPath);
 		ITester testerProxy = client.CreateProxy();
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(serverPath, tester);
+		using RmiServer<ITester> server = new(ServerPath, tester);
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 
