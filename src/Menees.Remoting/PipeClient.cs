@@ -26,16 +26,16 @@ internal sealed class PipeClient : PipeBase
 
 	#region Public Methods
 
-	internal async Task SendRequestAsync(TimeSpan connectTimeout, Func<Stream, Task> sendRequest)
+	internal void SendRequest(TimeSpan connectTimeout, Action<Stream> sendRequest)
 	{
 		// We only use a pipe for a single request. Remotely invoked interfaces shouldn't be chatty anyway.
 		// Single-use connections are easier to reason about and manage the state for. They also give us
 		// a lot of freedom to swap in other transports later (e.g., Http, ZeroMQ, TcpClient/TcpListener) if desired.
 		// HTTP 1.0 used non-persistent connections, and it was fine for non-chatty interfaces.
 		using NamedPipeClientStream pipe = new(this.ServerName, this.PipeName, Direction, PipeOptions.None);
-		await pipe.ConnectAsync(ConvertTimeout(connectTimeout)).ConfigureAwait(false);
+		pipe.Connect(ConvertTimeout(connectTimeout));
 		pipe.ReadMode = Mode;
-		await sendRequest(pipe).ConfigureAwait(false);
+		sendRequest(pipe);
 	}
 
 	#endregion

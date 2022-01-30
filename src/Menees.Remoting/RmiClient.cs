@@ -82,16 +82,16 @@ public sealed class RmiClient<TServiceInterface> : RmiBase<TServiceInterface>
 
 	#region Internal Methods
 
-	internal async Task<object?> InvokeAsync(MethodInfo targetMethod, object?[] args)
+	internal object? Invoke(MethodInfo targetMethod, object?[] args)
 	{
 		Request request = this.CreateRequest(targetMethod, args);
 
 		Response? response = null;
-		await this.pipe.SendRequestAsync(this.ConnectTimeout, async stream =>
+		this.pipe.SendRequest(this.ConnectTimeout, stream =>
 		{
-			await request.WriteToAsync(stream, this.SystemSerializer).ConfigureAwait(false);
-			response = await Message.ReadFromAsync<Response>(stream, this.SystemSerializer).ConfigureAwait(false);
-		}).ConfigureAwait(false);
+			request.WriteTo(stream, this.SystemSerializer);
+			response = Message.ReadFrom<Response>(stream, this.SystemSerializer);
+		});
 
 		response?.Error?.ThrowException();
 		object? result = response?.Result?.DeserializeValue(this.UserSerializer);

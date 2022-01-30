@@ -13,6 +13,7 @@
 	<Choose>
 		<When Condition=" '$(TargetFramework)' == '$(MeneesTargetNetFramework)' ">
 			<ItemGroup>
+				<!-- See comments at the top of ClientProxy.cs. v6.0.0 isn't available as a NuGet package. -->
 				<PackageReference Include="System.Reflection.DispatchProxy" Version="4.7.1" />
 			</ItemGroup>
 		</When>

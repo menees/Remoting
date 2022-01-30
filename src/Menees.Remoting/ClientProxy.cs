@@ -11,16 +11,23 @@ using System.Reflection;
 /// </summary>
 /// <remarks>
 /// DispatchProxy.Create requires this type to be un-sealed.
-/// It's also required to be public until we can reference v6.0.0 of DispatchProxy containing fix 30917.
-/// As of Jan 26, 2022, v6.0.0 is still not publically available on NuGet even though the fix was supposedly
-/// in 6.0.0-preview.3.21152.1 as of Mar 4, 2021 per AArnott. :-(
+/// <para/>
+/// It's also required to be public for .NET Framework until we can reference v6.0.0 of DispatchProxy containing
+/// fix 30917. As of Jan 26, 2022, v6.0.0 is still not publically available on NuGet even though the fix was in
+/// 6.0.0-preview.3.21152.1 as of Mar 4, 2021 per AArnott. The v6 libraray is available to .NET 6 builds via
+/// the SDK, but it's not available as a NuGet package for a .NET Framework target. :-(
 /// https://github.com/dotnet/runtime/issues/30917
 /// <para/>
 /// Note: Since this library is strongly-named, it can't used the InternalsVisibleTo("ProxyBuilder") hack.
 /// https://github.com/dotnet/runtime/issues/25595#issuecomment-546330898
 /// </remarks>
 /// <typeparam name="TServiceInterface"></typeparam>
-public class ClientProxy<TServiceInterface> : DispatchProxy
+#if NETFRAMEWORK
+public
+#else
+internal
+#endif
+class ClientProxy<TServiceInterface> : DispatchProxy
 	where TServiceInterface : class
 {
 	#region Private Data Members
@@ -73,6 +80,7 @@ public class ClientProxy<TServiceInterface> : DispatchProxy
 			throw new ArgumentNullException(nameof(targetMethod));
 		}
 
+		// TODO: Explain how we could hit thread pool starvation here if we did .GetAwaiter().GetResult(). [Bill, 1/30/2022]
 		// TODO: Add support for CancellationToken "everywhere". [Bill, 1/30/2022]
 		// TODO: Use AsyncContext in unit tests. Try to simulate UI SynchronizationContext.[Bill, 1/30/2022]
 		// https://github.com/StephenCleary/AsyncEx/wiki/AsyncContext
@@ -83,12 +91,8 @@ public class ClientProxy<TServiceInterface> : DispatchProxy
 		// https://devblogs.microsoft.com/pfxteam/should-i-expose-synchronous-wrappers-for-asynchronous-methods/
 		// https://blog.stephencleary.com/2012/07/dont-block-on-async-code.html (related)
 		//
-		// We're using .GetAwaiter().GetResult() instead of .Result because we don't want an exception from InvokeAsync to be
-		// wrapped in an AggregateException.
 		// https://docs.microsoft.com/en-us/archive/msdn-magazine/2015/july/async-programming-brownfield-async-development#the-blocking-hack
-#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits. See explanation above.
-		object? result = this.client.InvokeAsync(targetMethod, args ?? Array.Empty<object?>()).GetAwaiter().GetResult();
-#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
+		object? result = this.client.Invoke(targetMethod, args ?? Array.Empty<object?>());
 		return result;
 	}
 
