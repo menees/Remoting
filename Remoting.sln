@@ -6,7 +6,6 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Src", "Src", "{4940FA04-0E5D-4D6A-B260-5FE0D57A026E}"
 	ProjectSection(SolutionItems) = preProject
 		src\Directory.Build.props = src\Directory.Build.props
-		src\Menees.Remoting.ruleset = src\Menees.Remoting.ruleset
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Menees.Remoting", "src\Menees.Remoting\Menees.Remoting.csproj", "{35FC2EF7-B57E-4F02-9AAF-CDFCC1D1AD89}"
@@ -31,7 +30,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{D0BF0C5F
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Menees.Remoting.Tests", "tests\Menees.Remoting.Tests\Menees.Remoting.Tests.csproj", "{47071A35-84E5-457C-BEB5-100DF0B1AC6D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerHost", "tests\ServerHost\ServerHost.csproj", "{240F6516-22D2-4B89-AD74-A5E57FE3047D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerHost", "tests\ServerHost\ServerHost.csproj", "{240F6516-22D2-4B89-AD74-A5E57FE3047D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

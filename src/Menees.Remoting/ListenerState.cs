@@ -2,6 +2,7 @@
 
 internal enum ListenerState
 {
+	Created,
 	WaitingForConnection,
 	Connected,
 	ProcessingRequest,

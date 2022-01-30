@@ -36,6 +36,7 @@ public class ClientProxy<TServiceInterface> : DispatchProxy
 	/// </summary>
 	public ClientProxy()
 	{
+		// TODO: Log issue to get v6.0.0 of DispatchProxy published. [Bill, 1/30/2022]
 		// Note: DispatchProxy.Create requires a public default constructor for this.
 	}
 
@@ -72,7 +73,22 @@ public class ClientProxy<TServiceInterface> : DispatchProxy
 			throw new ArgumentNullException(nameof(targetMethod));
 		}
 
-		object? result = this.client.Invoke(targetMethod, args ?? Array.Empty<object?>());
+		// TODO: Add support for CancellationToken "everywhere". [Bill, 1/30/2022]
+		// TODO: Use AsyncContext in unit tests. Try to simulate UI SynchronizationContext.[Bill, 1/30/2022]
+		// https://github.com/StephenCleary/AsyncEx/wiki/AsyncContext
+		//
+		// Stephen Toub discusses "What if I really do need 'sync over async'?" in a blog article. Under "Avoid Unnecessary Marshaling"
+		// he talks about how libraries should use ConfigureAwait(false) on every await. Since we do that, we know this InvokeAsync
+		// will not deadlock waiting on the calling thread's SynchronizationContext (if there is one).
+		// https://devblogs.microsoft.com/pfxteam/should-i-expose-synchronous-wrappers-for-asynchronous-methods/
+		// https://blog.stephencleary.com/2012/07/dont-block-on-async-code.html (related)
+		//
+		// We're using .GetAwaiter().GetResult() instead of .Result because we don't want an exception from InvokeAsync to be
+		// wrapped in an AggregateException.
+		// https://docs.microsoft.com/en-us/archive/msdn-magazine/2015/july/async-programming-brownfield-async-development#the-blocking-hack
+#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits. See explanation above.
+		object? result = this.client.InvokeAsync(targetMethod, args ?? Array.Empty<object?>()).GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
 		return result;
 	}
 

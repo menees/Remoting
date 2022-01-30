@@ -54,7 +54,7 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 		this.serviceInstance = serviceInstance;
 
 		// Note: The pipe is created with no listeners until we explicitly start them.
-		this.pipe = new(serverPath, minListeners, maxListeners, this.ProcessRequest, logger ?? (ILogger)NullLogger.Instance);
+		this.pipe = new(serverPath, minListeners, maxListeners, this.ProcessRequestAsync, logger ?? (ILogger)NullLogger.Instance);
 
 		// TODO: Use logger for default ReportUnhandledException behavior. [Bill, 1/29/2022]
 	}
@@ -102,13 +102,13 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 		return response;
 	}
 
-	private void ProcessRequest(Stream clientStream)
+	private async Task ProcessRequestAsync(Stream clientStream)
 	{
 		Response response;
 
 		try
 		{
-			Request request = Message.ReadFrom<Request>(clientStream, this.SystemSerializer);
+			Request request = await Message.ReadFromAsync<Request>(clientStream, this.SystemSerializer).ConfigureAwait(false);
 
 			if (!MethodSignatureCache.TryGetValue(request.MethodSignature ?? string.Empty, out MethodInfo? method))
 			{
@@ -128,6 +128,8 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 				{
 					methodResult = method.Invoke(target, args);
 					Type returnType = methodResult?.GetType() ?? method.ReturnType;
+
+					// TODO: If return type is Task then await methodResult. [Bill, 1/30/2022]
 					response = new Response { Result = new UserSerializedValue(returnType, methodResult, this.UserSerializer) };
 				}
 				catch (TargetInvocationException ex)
@@ -158,7 +160,7 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 			}
 		}
 
-		response.WriteTo(clientStream, this.SystemSerializer);
+		await response.WriteToAsync(clientStream, this.SystemSerializer).ConfigureAwait(false);
 	}
 
 	#endregion

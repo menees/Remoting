@@ -1,20 +1,13 @@
 ﻿namespace Menees.Remoting;
 
-// TODO: Make all stream usage in Message use async. [Bill, 1/29/2022]
-// Toub says use ConfigureAwait(false) everywhere and "return Lib.FooAsync().Result" is ok.
-// https://devblogs.microsoft.com/pfxteam/should-i-expose-synchronous-wrappers-for-asynchronous-methods/
 internal abstract class Message
 {
 	#region Public Methods
 
-	public static T ReadFrom<T>(Stream stream, ISerializer serializer)
+	public static async Task<T> ReadFromAsync<T>(Stream stream, ISerializer serializer)
 		where T : Message
 	{
-		if (!TryRead(stream, sizeof(int), out byte[] buffer))
-		{
-			throw new ArgumentException(
-				$"Unable to read {sizeof(int)} byte message length from stream. Only {buffer.Length} bytes were available.");
-		}
+		byte[] buffer = await RequireReadAsync(stream, sizeof(int), "message length").ConfigureAwait(false);
 
 		// The message length is always written in little endian order.
 		if (!BitConverter.IsLittleEndian)
@@ -23,11 +16,7 @@ internal abstract class Message
 		}
 
 		int length = BitConverter.ToInt32(buffer, 0);
-		if (!TryRead(stream, length, out buffer))
-		{
-			throw new ArgumentException(
-				$"Unable to read {length} byte message from stream. Only {buffer.Length} bytes were available.");
-		}
+		buffer = await RequireReadAsync(stream, length, "message body").ConfigureAwait(false);
 
 		T result = (T?)serializer.Deserialize(buffer, typeof(T))
 			?? throw new ArgumentNullException($"{typeof(T).Name} message cannot be null.");
@@ -35,7 +24,7 @@ internal abstract class Message
 		return result;
 	}
 
-	public void WriteTo(Stream stream, ISerializer serializer)
+	public async Task WriteToAsync(Stream stream, ISerializer serializer)
 	{
 		byte[] message = serializer.Serialize(this, this.GetType());
 
@@ -48,27 +37,27 @@ internal abstract class Message
 			Array.Reverse(messageLength);
 		}
 
-		stream.Write(messageLength, 0, messageLength.Length);
-		stream.Write(message, 0, message.Length);
-		stream.Flush();
+		await stream.WriteAsync(messageLength, 0, messageLength.Length).ConfigureAwait(false);
+		await stream.WriteAsync(message, 0, message.Length).ConfigureAwait(false);
+		await stream.FlushAsync().ConfigureAwait(false);
 	}
 
 	#endregion
 
 	#region Private Methods
 
-	private static bool TryRead(Stream stream, int requiredCount, out byte[] data)
+	private static async Task<byte[]> RequireReadAsync(Stream stream, int requiredCount, string forWhat)
 	{
-		data = new byte[requiredCount];
+		byte[] result = new byte[requiredCount];
 
 		int totalCount = 0;
 		while (totalCount < requiredCount)
 		{
-			// Read blocks until data arrives. Typically, it returns the exact amount we request (once
+			// ReadAsync waits until data arrives. Typically, it returns the exact amount we request (once
 			// a writer pushes that into the stream). Theoretically, it could return less and then make
 			// more data available on the next call. So we'll loop until the stream runs out (i.e., is closed
 			// by the writer) or until we get what we want. https://stackoverflow.com/a/46797865/1882616
-			int readCount = stream.Read(data, totalCount, requiredCount - totalCount);
+			int readCount = await stream.ReadAsync(result, totalCount, requiredCount - totalCount).ConfigureAwait(false);
 			if (readCount <= 0)
 			{
 				break;
@@ -77,12 +66,10 @@ internal abstract class Message
 			totalCount += readCount;
 		}
 
-		bool result = totalCount == requiredCount;
-		if (!result)
+		if (totalCount != requiredCount)
 		{
-			// We don't want to give back an array that's too long, and we want the caller to know exactly
-			// what (and how much) we received. This should be very rare and only in error conditions.
-			Array.Resize(ref data, totalCount);
+			throw new ArgumentException(
+				$"Unable to read {requiredCount} byte {forWhat} from stream. Only {totalCount} bytes were available.");
 		}
 
 		return result;

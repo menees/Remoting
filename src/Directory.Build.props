@@ -19,7 +19,6 @@
 		<TargetFrameworks>$(MeneesTargetNetCoreBase);$(MeneesTargetNetFramework)</TargetFrameworks>
 
 		<RepoSrcFolder>$(MSBuildThisFileDirectory)</RepoSrcFolder>
-		<CodeAnalysisRuleSet>$(RepoSrcFolder)Menees.Remoting.ruleset</CodeAnalysisRuleSet>
 		<AssemblyOriginatorKeyFile>$(RepoSrcFolder)Menees.Remoting.snk</AssemblyOriginatorKeyFile>
 		<UseCustomCodeAnalyzers>true</UseCustomCodeAnalyzers>
 		<Nullable>enable</Nullable>
@@ -86,5 +85,8 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-	</ItemGroup>
+		<PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.0.64">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+		</PackageReference>	</ItemGroup>
 </Project>

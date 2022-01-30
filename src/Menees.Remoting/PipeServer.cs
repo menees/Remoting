@@ -3,7 +3,6 @@
 #region Using Directives
 
 using System.IO.Pipes;
-using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 
 #endregion
@@ -11,8 +10,6 @@ using Microsoft.Extensions.Logging;
 internal sealed class PipeServer : PipeBase
 {
 	#region Private Data Members
-
-	private static readonly bool IsNetFramework = RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework");
 
 	private readonly HashSet<PipeServerListener> listeners = new();
 	private readonly int minListeners;
@@ -23,7 +20,7 @@ internal sealed class PipeServer : PipeBase
 
 	#region Constructors
 
-	internal PipeServer(string pipeName, int minListeners, int maxListeners, Action<Stream> processRequest, ILogger logger)
+	internal PipeServer(string pipeName, int minListeners, int maxListeners, Func<Stream, Task> processRequestAsync, ILogger logger)
 		: base(pipeName)
 	{
 		if (minListeners <= 0)
@@ -47,7 +44,7 @@ internal sealed class PipeServer : PipeBase
 
 		this.minListeners = minListeners;
 		this.maxListeners = maxListeners;
-		this.ProcessRequest = processRequest;
+		this.ProcessRequestAsync = processRequestAsync;
 		this.logger = logger;
 
 		// Note: We don't create any listeners here in the constructor because we want to finish construction first.
@@ -60,22 +57,9 @@ internal sealed class PipeServer : PipeBase
 
 	#region Public Properties
 
-	public Action<Stream> ProcessRequest { get; }
+	public Func<Stream, Task> ProcessRequestAsync { get; }
 
 	public Action<Exception>? ReportUnhandledException { get; set; }
-
-	#endregion
-
-	#region Private Properties
-
-	// TODO: This seems crazy. .NET 6 should use PipeOptions.Asynchronous too. [Bill, 1/29/2022]
-	// .NET Framework requires the Asynchronous option in order to call BeginWaitForConnection in the listener,
-	// and everything works correctly in the server even though the client is synchronous.
-	//
-	// .NET 6.0.1 and up deadlocks due to blocked async threads with the threadpool is all in use. It shows up
-	// in unit tests when using Parallel.ForEach. The blocks happen because our Message class is using synchronous
-	// I/O with the stream. When we use the None option, it all works without deadlocking the async threads.
-	private static PipeOptions Options => IsNetFramework ? PipeOptions.Asynchronous : PipeOptions.None;
 
 	#endregion
 
@@ -122,7 +106,7 @@ internal sealed class PipeServer : PipeBase
 			this.LogTrace("Available listeners: {Count}", availableListeners);
 			if (availableListeners > 0)
 			{
-				int waitingCount = this.listeners.Count(listener => listener.State == ListenerState.WaitingForConnection);
+				int waitingCount = this.listeners.Count(listener => listener.State <= ListenerState.WaitingForConnection);
 				this.LogTrace("Waiting listeners: {Count}", waitingCount);
 				if (waitingCount < this.minListeners)
 				{
@@ -131,9 +115,16 @@ internal sealed class PipeServer : PipeBase
 					for (int i = 0; i < createCount; i++)
 					{
 						// Pass the actual maxListeners value to the new pipe since it's externally visible using SysInternals' PipeList.
-						NamedPipeServerStream pipe = new(this.PipeName, Direction, this.maxListeners, Mode, Options);
+						NamedPipeServerStream pipe = new(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous);
 						PipeServerListener listener = new(this, pipe);
 						this.listeners.Add(listener);
+
+						// Note: We're intentionally not waiting on this to return. This is a true fire-and-forget case.
+						// When an I/O thread signals the listener that a client has connected, that listener will
+						// call back into us to start a new listener when available.
+#pragma warning disable VSTHRD110 // Observe result of async calls. Intentionally fire-and-forget.
+						listener.StartAsync().ConfigureAwait(false);
+#pragma warning restore VSTHRD110 // Observe result of async calls
 					}
 				}
 			}

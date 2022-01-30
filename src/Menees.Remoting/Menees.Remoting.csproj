@@ -6,9 +6,16 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="System.Reflection.DispatchProxy" Version="4.7.1" />
 	  <PackageReference Include="System.Text.Json" Version="6.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
 	</ItemGroup>
+
+	<Choose>
+		<When Condition=" '$(TargetFramework)' == '$(MeneesTargetNetFramework)' ">
+			<ItemGroup>
+				<PackageReference Include="System.Reflection.DispatchProxy" Version="4.7.1" />
+			</ItemGroup>
+		</When>
+	</Choose>
 
 </Project>
