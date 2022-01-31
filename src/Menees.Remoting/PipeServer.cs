@@ -74,6 +74,7 @@ internal sealed class PipeServer : PipeBase
 	internal void Log(LogLevel logLevel, Exception? ex, string? message, params object?[] args)
 	{
 		// TODO: Use a static template expression. [Bill, 1/29/2022]
+		// https://docs.microsoft.com/en-us/dotnet/core/extensions/high-performance-logging
 #pragma warning disable CA2254 // Template should be a static expression.
 		using (this.logger.BeginScope(new Dictionary<string, object> { { nameof(this.PipeName), this.PipeName } }))
 		{
