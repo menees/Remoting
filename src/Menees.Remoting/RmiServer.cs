@@ -17,6 +17,15 @@ using Microsoft.Extensions.Logging.Abstractions;
 public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, IRmiServer
 	where TServiceInterface : class
 {
+	#region Public Constants
+
+	/// <summary>
+	/// Represents the maximum number of server instances that the system resources allow.
+	/// </summary>
+	public const int MaxAllowedListeners = NamedPipeServerStream.MaxAllowedServerInstances;
+
+	#endregion
+
 	#region Private Data Members
 
 	private static readonly Dictionary<string, MethodInfo> MethodSignatureCache =
@@ -45,7 +54,7 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 	public RmiServer(
 		string serverPath,
 		TServiceInterface serviceInstance,
-		int maxListeners = NamedPipeServerStream.MaxAllowedServerInstances,
+		int maxListeners = MaxAllowedListeners,
 		int minListeners = 1,
 		ISerializer? serializer = null,
 		ILogger<RmiServer<TServiceInterface>>? logger = null)

@@ -28,6 +28,9 @@ internal sealed class PipeServer : PipeBase
 			throw new ArgumentOutOfRangeException(nameof(minListeners), $"{nameof(minListeners)} must be positive.");
 		}
 
+		// Stephen Toub made a comment "that Windows supports this across processes",
+		// and it seems to imply that Unix doesn't. Maybe it's a per process limit in Unix.
+		// https://github.com/dotnet/corefx/pull/24798#issuecomment-338809086
 		if (maxListeners != NamedPipeServerStream.MaxAllowedServerInstances)
 		{
 			if (maxListeners <= 0)
@@ -72,13 +75,11 @@ internal sealed class PipeServer : PipeBase
 	{
 		// TODO: Use a static template expression. [Bill, 1/29/2022]
 #pragma warning disable CA2254 // Template should be a static expression.
-		this.logger.Log(logLevel, ex, message, args);
-#pragma warning restore CA2254 // Template should be a static expression
-
-		if (ex != null)
+		using (this.logger.BeginScope(new Dictionary<string, object> { { nameof(this.PipeName), this.PipeName } }))
 		{
-			this.ReportUnhandledException?.Invoke(ex);
+			this.logger.Log(logLevel, ex, message, args);
 		}
+#pragma warning restore CA2254 // Template should be a static expression
 	}
 
 	internal void EnsureMinListeners()
@@ -114,8 +115,24 @@ internal sealed class PipeServer : PipeBase
 					this.LogTrace("Create listeners: {Count}", createCount);
 					for (int i = 0; i < createCount; i++)
 					{
-						// Pass the actual maxListeners value to the new pipe since it's externally visible using SysInternals' PipeList.
-						NamedPipeServerStream pipe = new(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous);
+						NamedPipeServerStream? pipe = null;
+						try
+						{
+							// Pass the actual maxListeners value to the new pipe since it's externally visible using SysInternals' PipeList.
+							pipe = new(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous);
+						}
+						catch (IOException ex)
+						{
+							// We can get "All pipe instances are busy." if we reached the requested max limit or hit an OS limit.
+							this.Log(LogLevel.Error, ex, "Unable to create new named pipe server.");
+						}
+
+						if (pipe == null)
+						{
+							// "Merry Christmas. Shitter's full." https://www.youtube.com/watch?v=BeskbiJjCXI#t=21s
+							break;
+						}
+
 						PipeServerListener listener = new(this, pipe);
 						this.listeners.Add(listener);
 

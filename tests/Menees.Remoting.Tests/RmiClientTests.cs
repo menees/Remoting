@@ -29,7 +29,7 @@ public class RmiClientTests
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(ServerPath, tester);
+		using RmiServer<ITester> server = new(ServerPath, tester, logger: AssemblyEvents.CreateServerLogger<ITester>());
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 
@@ -62,7 +62,7 @@ public class RmiClientTests
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(ServerPath, tester);
+		using RmiServer<ITester> server = new(ServerPath, tester, logger: AssemblyEvents.CreateServerLogger<ITester>());
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 

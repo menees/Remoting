@@ -43,6 +43,7 @@ else
 				object serviceInstance = Activator.CreateInstance(serviceType)!;
 				using IRmiServer server = (IRmiServer)Activator.CreateInstance(serverType, serverPathPrefix, serviceInstance, maxListeners, minListeners)!;
 
+				// TODO: Configure logging and pass a logger to server. [Bill, 1/31/2022]
 				ServerHostManager manager = new();
 				using RmiServer<IServerHost> managerServer = new(serverPathPrefix + "`Manager", manager, 1);
 

@@ -17,7 +17,7 @@ public class RmiServerTests
 	{
 		string serverPath = typeof(string).FullName!;
 		string expected = Guid.NewGuid().ToString();
-		using RmiServer<ICloneable> server = new(serverPath, expected);
+		using RmiServer<ICloneable> server = new(serverPath, expected, logger: AssemblyEvents.CreateServerLogger<ICloneable>());
 
 		// This is a super weak, insecure example since it just checks for the word "System".
 		server.TryGetType = typeName => typeName.Contains(nameof(System))
@@ -34,24 +34,31 @@ public class RmiServerTests
 	}
 
 	[TestMethod]
-	public void SingleServerMultiClient()
+	public void SingleServer()
 	{
 		// Run 20 clients that have to wait on a single server listener.
 		TestCombine(1, 1, 20);
 	}
 
 	[TestMethod]
-	public void MultiServerMultiClientMedium()
+	public void MultiServerMedium()
 	{
 		// Run 100 clients that will have to wait on the 4-20 server listeners.
 		TestCombine(4, 20, 100);
 	}
 
 	[TestMethod]
-	public void MultiServerMultiClientLarge()
+	public void MultiServerLarge()
 	{
-		// Run 100 clients that will have to wait on the 4-20 server listeners.
+		// Run 5000 clients that will have to wait on the 20-100 server listeners.
 		TestCombine(20, 100, 5000);
+	}
+
+	[TestMethod]
+	public void UnlimitedServerMedium()
+	{
+		// Run 500 clients that will have to wait on the available server listeners.
+		TestCombine(1, RmiServer<ITester>.MaxAllowedListeners, 500);
 	}
 
 	[TestMethod]
@@ -59,7 +66,7 @@ public class RmiServerTests
 	{
 		const string serverPath = nameof(this.InProcessServer);
 		InProcServerHost host = new();
-		using RmiServer<IServerHost> server = new(serverPath, host, 2, 2);
+		using RmiServer<IServerHost> server = new(serverPath, host, 2, 2, logger: AssemblyEvents.CreateServerLogger<IServerHost>());
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		server.Start();
 
@@ -96,12 +103,11 @@ public class RmiServerTests
 		string serverPath = callerMemberName ?? throw new ArgumentNullException(nameof(callerMemberName));
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(serverPath, tester, maxServerListeners, minServerListeners);
+		using RmiServer<ITester> server = new(serverPath, tester, maxServerListeners, minServerListeners, logger: AssemblyEvents.CreateServerLogger<ITester>());
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		server.Start();
 
-		// TODO: Allow full clientCount after net48 hang is fixed. [Bill, 1/29/2022]
-		TestCombine(clientCount / clientCount, serverPath);
+		TestCombine(clientCount, serverPath);
 	}
 
 	private static void TestCombine(int clientCount, string serverPath)

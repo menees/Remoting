@@ -72,32 +72,55 @@ internal sealed class PipeServerListener : IDisposable
 	public async Task StartAsync()
 	{
 		this.State = ListenerState.WaitingForConnection;
-		await this.pipe.WaitForConnectionAsync().ConfigureAwait(false);
+		try
+		{
+			// Stephen Toub says WaitForConnectionAsync will throw an exception (correctly)
+			// when the stream is closed on Windows and on Unix.
+			// https://github.com/dotnet/runtime/issues/24007#issuecomment-340810385
+			await this.pipe.WaitForConnectionAsync().ConfigureAwait(false);
+			this.State = ListenerState.Connected;
+		}
+		catch (IOException ex)
+		{
+			// We can get "The pipe has been ended." if the client closed early.
+			this.server.Log(LogLevel.Error, ex, "Wait for pipe connection failed.");
+		}
+		catch (ObjectDisposedException ex)
+		{
+			// TODO: Why does this Disposed exception happen so often? It should only happen when the server is shutting down. [Bill, 1/31/2022]
+			this.server.Log(LogLevel.Debug, ex, "Listener disposed while waiting for pipe.");
+		}
+		catch (Exception ex)
+		{
+			this.server.Log(LogLevel.Error, ex, "Unhandled exception waiting for pipe connection.");
+			this.server.ReportUnhandledException?.Invoke(ex);
+		}
 
 		// Per NamedPipeServerInstance at https://www.codeproject.com/Articles/1199046/A-Csharp-Named-Pipe-Library-That-Supports-Multiple,
 		// the wait will end if the listener is disposed while it's still waiting for a connection. In that case, we should do nothing.
 		if (!this.disposed)
 		{
-			this.State = ListenerState.Connected;
-
-			// Since this listener is now connected (and about to begin processing a request), tell the server so it
-			// can start another listener if necessary. If the server is already at its max, it may not be able to.
-			this.server.LogTrace("Listener connected");
-			this.server.EnsureMinListeners();
-
-			this.State = ListenerState.ProcessingRequest;
-			try
+			if (this.State == ListenerState.Connected)
 			{
-				await this.server.ProcessRequestAsync(this.pipe).ConfigureAwait(false);
-			}
-			catch (Exception ex)
-			{
-				this.server.ReportUnhandledException?.Invoke(ex);
+				// Since this listener is now connected (and about to begin processing a request), tell the server so it
+				// can start another listener if necessary. If the server is already at its max, it may not be able to.
+				this.server.LogTrace("Listener connected");
+				this.server.EnsureMinListeners();
+
+				this.State = ListenerState.ProcessingRequest;
+				try
+				{
+					await this.server.ProcessRequestAsync(this.pipe).ConfigureAwait(false);
+					this.State = ListenerState.FinishedRequest;
+				}
+				catch (Exception ex)
+				{
+					this.server.Log(LogLevel.Error, ex, "Error processing request.");
+					this.server.ReportUnhandledException?.Invoke(ex);
+				}
 			}
 
 			this.server.LogTrace("Stopping listener.");
-
-			this.State = ListenerState.FinishedRequest;
 
 			// Self dispose since each listener should only be used for a single request.
 			this.Dispose();
