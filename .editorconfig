@@ -5,6 +5,8 @@ root = true
 [*]
 indent_style = tab
 
+# Code files
+[*.{cs,vb}]
 # IDE0063: Use simple 'using' statement
 csharp_prefer_simple_using_statement = true:suggestion
 
@@ -15,11 +17,9 @@ csharp_style_prefer_range_operator = true:silent
 csharp_style_prefer_switch_expression = true:suggestion
 
 csharp_using_directive_placement = inside_namespace
-dotnet_diagnostic.CC0061.severity=warning
+dotnet_sort_system_directives_first = true
 
 # The dotnet_diagnostic entries replace old .ruleset files for code analysis.
-# Code files
-[*.{cs,vb}]
 # CS1574: XML comment has cref attribute that could not be resolved
 dotnet_diagnostic.CS1574.severity = none
 
@@ -38,6 +38,7 @@ dotnet_diagnostic.CC0014.severity = none
 dotnet_diagnostic.CC0031.severity = none
 dotnet_diagnostic.CC0037.severity = none
 dotnet_diagnostic.CC0048.severity = none
+dotnet_diagnostic.CC0061.severity=warning
 dotnet_diagnostic.CC0097.severity = none
 dotnet_diagnostic.CC0105.severity = none
 dotnet_diagnostic.CC0106.severity = none
