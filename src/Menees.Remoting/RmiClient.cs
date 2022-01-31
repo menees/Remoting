@@ -3,6 +3,8 @@
 #region Using Directives
 
 using System.Reflection;
+using Menees.Remoting.Models;
+using Menees.Remoting.Pipes;
 using Microsoft.Extensions.Logging;
 
 #endregion

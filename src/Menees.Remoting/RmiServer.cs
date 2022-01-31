@@ -4,8 +4,9 @@
 
 using System.IO.Pipes;
 using System.Reflection;
+using Menees.Remoting.Models;
+using Menees.Remoting.Pipes;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 #endregion
 

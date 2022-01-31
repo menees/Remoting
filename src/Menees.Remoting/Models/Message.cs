@@ -1,4 +1,4 @@
-﻿namespace Menees.Remoting;
+﻿namespace Menees.Remoting.Models;
 
 internal abstract class Message
 {

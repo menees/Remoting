@@ -1,4 +1,4 @@
-﻿namespace Menees.Remoting;
+﻿namespace Menees.Remoting.Models;
 
 /// <summary>
 /// Used to pair a <see cref="Type"/> with a <see cref="SerializedValue"/>
