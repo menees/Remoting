@@ -35,13 +35,25 @@ internal sealed class PipeClient : PipeBase
 		// HTTP 1.0 used non-persistent connections, and it was fine for non-chatty interfaces.
 		using NamedPipeClientStream pipe = new(this.ServerName, this.PipeName, Direction, PipeOptions.None);
 
+		// System.Threading.Timeout.InfiniteTimeSpan is -1 milliseconds (-00:00:00.0010000).
+		// To simplify our "while" loop and remainingWaitTime logic we'll start from a non-negative value.
+		if (connectTimeout < TimeSpan.Zero)
+		{
+			connectTimeout = TimeSpan.MaxValue;
+		}
+
+		const int ERROR_SEM_TIMEOUT = unchecked((int)0x80070079);
+		bool connected = false;
+		TimeSpan remainingWaitTime = connectTimeout;
 		Stopwatch stopwatch = Stopwatch.StartNew();
-		while (stopwatch.Elapsed < connectTimeout)
+		do
 		{
 			try
 			{
-				TimeSpan remainingWaitTime = connectTimeout - stopwatch.Elapsed;
-				pipe.Connect(Math.Max(1, ConvertTimeout(remainingWaitTime)));
+				int remainingTimeout = ConvertTimeout(remainingWaitTime);
+				int connectAttemptTimeout = remainingTimeout == Timeout.Infinite ? Timeout.Infinite : Math.Max(1, remainingTimeout);
+				pipe.Connect(connectAttemptTimeout);
+				connected = true;
 				break;
 			}
 			catch (FileNotFoundException ex)
@@ -54,9 +66,26 @@ internal sealed class PipeClient : PipeBase
 				// https://stackoverflow.com/questions/23432640/namedpipeclientstream-connect-throws-system-io-filenotfoundexception-unable-t
 				// https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-waitnamedpipea?redirectedfrom=MSDN#remarks
 
-				// TODO: Log this exception? [Bill, 1/31/2022]
+				// TODO: Log this exception at debug level. [Bill, 1/31/2022]
 				ex.GetHashCode();
 			}
+			catch (IOException ex) when (ex.HResult == ERROR_SEM_TIMEOUT)
+			{
+				// If a very short timeout is used (e.g., 1ms), then the pipe's semaphore wait will fail
+				// with an IOException("The semaphore timeout period has expired.").
+				// https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-waitnamedpipea#remarks
+				// TODO: Log this exception at debug level. [Bill, 1/31/2022]
+				ex.GetHashCode();
+			}
+
+			remainingWaitTime = connectTimeout == TimeSpan.MaxValue ? TimeSpan.MaxValue : connectTimeout - stopwatch.Elapsed;
+		}
+		while (!connected && remainingWaitTime > TimeSpan.Zero);
+
+		if (!connected)
+		{
+			// The code in NamedPipeClientStream.Connect(int) does "throw new TimeoutException();" with no message.
+			throw new TimeoutException("Could not connect to the server within the specified timeout period.");
 		}
 
 		pipe.ReadMode = Mode;
