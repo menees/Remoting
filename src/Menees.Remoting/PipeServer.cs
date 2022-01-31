@@ -20,8 +20,8 @@ internal sealed class PipeServer : PipeBase
 
 	#region Constructors
 
-	internal PipeServer(string pipeName, int minListeners, int maxListeners, Func<Stream, Task> processRequestAsync, ILogger logger)
-		: base(pipeName)
+	internal PipeServer(string pipeName, int minListeners, int maxListeners, Func<Stream, Task> processRequestAsync, ILoggerFactory loggers)
+		: base(pipeName, loggers)
 	{
 		if (minListeners <= 0)
 		{
@@ -48,7 +48,7 @@ internal sealed class PipeServer : PipeBase
 		this.minListeners = minListeners;
 		this.maxListeners = maxListeners;
 		this.ProcessRequestAsync = processRequestAsync;
-		this.logger = logger;
+		this.logger = loggers.CreateLogger(this.GetType());
 
 		// Note: We don't create any listeners here in the constructor because we want to finish construction first.
 		// If we created even one listener here, then it could start processing on a worker thread and immediately
@@ -125,7 +125,7 @@ internal sealed class PipeServer : PipeBase
 						catch (IOException ex)
 						{
 							// We can get "All pipe instances are busy." if we reached the requested max limit or hit an OS limit.
-							this.Log(LogLevel.Error, ex, "Unable to create new named pipe server.");
+							this.Log(LogLevel.Debug, ex, "Unable to create new named pipe server.");
 						}
 
 						if (pipe == null)

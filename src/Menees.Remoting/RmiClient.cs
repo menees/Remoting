@@ -3,6 +3,7 @@
 #region Using Directives
 
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 
 #endregion
 
@@ -30,16 +31,19 @@ public sealed class RmiClient<TServiceInterface> : RmiBase<TServiceInterface>
 	/// Note: The associated <see cref="RmiServer{TServiceInterface}"/> instance must use a compatible serializer.
 	/// </param>
 	/// <param name="connectTimeout">The interval to wait for a connection to a remote <see cref="RmiServer{TServiceInterface}"/>.
-	/// If null, then <see cref="DefaultConnectTimeout"/> is used.</param>
+	/// If null, then <see cref="DefaultConnectTimeout"/> is used.
+	/// </param>
+	/// <param name="loggerFactory">An optional factory for creating type-specific server loggers for status information.</param>
 	public RmiClient(
 		string serverPath,
 		string serverHost = ".",
 		ISerializer? serializer = null,
-		TimeSpan? connectTimeout = null)
-		: base(serializer)
+		TimeSpan? connectTimeout = null,
+		ILoggerFactory? loggerFactory = null)
+		: base(serializer, loggerFactory)
 	{
 		this.ConnectTimeout = connectTimeout ?? DefaultConnectTimeout;
-		this.pipe = new(serverPath, serverHost);
+		this.pipe = new(serverPath, serverHost, this.Loggers);
 	}
 
 	#endregion

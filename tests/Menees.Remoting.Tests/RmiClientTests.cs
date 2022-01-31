@@ -8,12 +8,12 @@ public class RmiClientTests
 	[TestMethod]
 	public void RmiClientTest()
 	{
-		using (RmiClient<IServerHost> client = new(this.GetType().FullName!))
+		using (RmiClient<IServerHost> client = new(this.GetType().FullName!, loggerFactory: AssemblyEvents.Loggers))
 		{
 			client.ConnectTimeout.ShouldBe(RmiClient<IServerHost>.DefaultConnectTimeout);
 		}
 
-		using (RmiClient<IServerHost> client = new(this.GetType().FullName!, connectTimeout: TimeSpan.FromSeconds(1)))
+		using (RmiClient<IServerHost> client = new(this.GetType().FullName!, connectTimeout: TimeSpan.FromSeconds(1), loggerFactory: AssemblyEvents.Loggers))
 		{
 			client.ConnectTimeout.ShouldBe(TimeSpan.FromSeconds(1));
 		}
@@ -24,12 +24,12 @@ public class RmiClientTests
 	{
 		const string ServerPath = nameof(this.CreateProxyTest);
 
-		using RmiClient<ITester> client = new(ServerPath, connectTimeout: TimeSpan.FromSeconds(2));
+		using RmiClient<ITester> client = new(ServerPath, connectTimeout: TimeSpan.FromSeconds(2), loggerFactory: AssemblyEvents.Loggers);
 		ITester testerProxy = client.CreateProxy();
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(ServerPath, tester, logger: AssemblyEvents.CreateServerLogger<ITester>());
+		using RmiServer<ITester> server = new(ServerPath, tester, loggerFactory: AssemblyEvents.Loggers);
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 
@@ -57,12 +57,12 @@ public class RmiClientTests
 	{
 		const string ServerPath = nameof(this.ThrowException);
 
-		using RmiClient<ITester> client = new(ServerPath);
+		using RmiClient<ITester> client = new(ServerPath, loggerFactory: AssemblyEvents.Loggers);
 		ITester testerProxy = client.CreateProxy();
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(ServerPath, tester, logger: AssemblyEvents.CreateServerLogger<ITester>());
+		using RmiServer<ITester> server = new(ServerPath, tester, loggerFactory: AssemblyEvents.Loggers);
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 

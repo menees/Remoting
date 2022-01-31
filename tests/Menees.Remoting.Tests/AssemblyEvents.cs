@@ -18,6 +18,12 @@ public sealed class AssemblyEvents
 
 	#endregion
 
+	#region Public Properties
+
+	public static ILoggerFactory Loggers => loggerFactory ?? NullLoggerFactory.Instance;
+
+	#endregion
+
 	#region Public Initialize/Cleanup Methods
 
 	[AssemblyInitialize]
@@ -27,27 +33,32 @@ public sealed class AssemblyEvents
 		// and we have to take it as a parameter for AssemblyInitialize to work.
 		testContext.GetHashCode();
 
+		// Set this to Trace to see everything logged. Console logging is slower than Debugger logging.
+		const LogLevel MinimumLogLevel = LogLevel.Debug;
+		const LogLevel ConsoleLogLevel = LogLevel.Debug;
+
 		loggerFactory = LoggerFactory.Create(builder =>
 		{
-			builder
-			.ClearProviders()
-			.SetMinimumLevel(LogLevel.Trace)
-			.AddDebug(); // Make the messages show up in the debugger's Output window.
+			builder.ClearProviders();
+
+			builder.SetMinimumLevel(MinimumLogLevel);
+
+			// Make the messages show up in the debugger's Output window.
+			builder.AddDebug();
 
 			// Note: We can't use any of the AddConsole methods from Microsoft.Extensions.Logging.Console because
 			// they all buffer the formatted lines in a worker queue, and the lines won't show up in the correct unit test
 			// due to the way MSTest attaches and detaches from stdout and stderr for each test.
-			// One workaround is to (re)create the logger factory and dispose of it in every test.
-			// Another workaround is to use a better logging system like Serilog.Sinks.Console.
-			// Or we can just use a simple local provider like ImmediateConsoleLoggerProvider.
 			// https://codeburst.io/unit-testing-with-net-core-ilogger-t-e8c16c503a80
 			// https://github.com/dotnet/runtime/blob/main/src/libraries/Microsoft.Extensions.Logging.Console/src/ConsoleLogger.cs#L61
-			consoleLoggerProvider = new ImmediateConsoleLoggerProvider();
+			//
+			// One workaround is to (re)create the logger factory and dispose of it in every test, but that's tedious.
+			// Another workaround is to use a better logging system like Serilog.Sinks.Console, but it's internal buffering
+			// can still show output in the wrong test. Or we can just use a simple local provider like
+			// ImmediateConsoleLoggerProvider that does no buffering. It's predictable but slow. :-(
+			consoleLoggerProvider = new ImmediateConsoleLoggerProvider(ConsoleLogLevel);
 			builder.AddProvider(consoleLoggerProvider);
 		});
-
-		Console.WriteLine("In Initialize");
-		loggerFactory.CreateLogger<AssemblyEvents>().LogInformation("Also in Initialize");
 	}
 
 	[AssemblyCleanup]
@@ -59,24 +70,28 @@ public sealed class AssemblyEvents
 
 	#endregion
 
-	#region Public Helper Methods
-
-	public static ILogger<T> CreateLogger<T>()
-		=> (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<T>();
-
-	public static ILogger<RmiServer<T>> CreateServerLogger<T>()
-		where T : class
-		=> (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmiServer<T>>();
-
-	#endregion
-
 	#region Private Types
 
 	private sealed class ImmediateConsoleLoggerProvider : ILoggerProvider
 	{
+		#region Private Data Members
+
+		private readonly LogLevel minLevel;
+
+		#endregion
+
+		#region Constructors
+
+		public ImmediateConsoleLoggerProvider(LogLevel minLevel)
+		{
+			this.minLevel = minLevel;
+		}
+
+		#endregion
+
 		#region Public Methods
 
-		public ILogger CreateLogger(string categoryName) => new ImmediateConsoleLogger(categoryName);
+		public ILogger CreateLogger(string categoryName) => new ImmediateConsoleLogger(categoryName, this.minLevel);
 
 		public void Dispose()
 		{
@@ -89,15 +104,17 @@ public sealed class AssemblyEvents
 			#region Private Data Members
 
 			private readonly string categoryName;
-			private readonly Stack<object?> scope = new();
+			private readonly LogLevel minLevel;
+			private readonly ThreadLocal<Stack<object?>> threadScope = new(() => new());
 
 			#endregion
 
 			#region Constructors
 
-			public ImmediateConsoleLogger(string categoryName)
+			public ImmediateConsoleLogger(string categoryName, LogLevel minLevel)
 			{
 				this.categoryName = categoryName;
+				this.minLevel = minLevel;
 			}
 
 			#endregion
@@ -105,14 +122,26 @@ public sealed class AssemblyEvents
 			#region Public Methods
 
 			public IDisposable BeginScope<TState>(TState state)
-				=> new Scope(this.scope, state);
+				=> new Scope(this.threadScope.Value!, state);
 
-			public bool IsEnabled(LogLevel logLevel) => true;
+			public bool IsEnabled(LogLevel logLevel) => logLevel >= this.minLevel;
 
 			public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 			{
+				string levelName = logLevel switch
+				{
+					LogLevel.Trace => "TRC",
+					LogLevel.Debug => "DBG",
+					LogLevel.Information => "INF",
+					LogLevel.Warning => "WRN",
+					LogLevel.Error => "ERR",
+					LogLevel.Critical => "CRT",
+					LogLevel.None => "NON",
+					_ => logLevel.ToString(),
+				};
+
 				StringBuilder sb = new();
-				sb.AppendFormat("{0:HH:mm:ss.fff} [{1}] ", DateTime.Now, logLevel);
+				sb.AppendFormat("[{0:HH:mm:ss.fff} {1}] ", DateTime.Now, levelName);
 				if (eventId.Id != 0)
 				{
 					sb.Append('#').Append(eventId.Id).Append(' ');
@@ -120,10 +149,15 @@ public sealed class AssemblyEvents
 
 				sb.Append(this.categoryName).Append(' ');
 
-				string message = formatter(state, exception);
+				string message = formatter(state, null);
 				sb.Append(message);
+				if (exception != null)
+				{
+					sb.Append(' ');
+					Append(sb, exception, tag: "Exception: ");
+				}
 
-				foreach (object? value in this.scope)
+				foreach (object? value in this.threadScope.Value!)
 				{
 					sb.Append(' ');
 					Append(sb, value);
@@ -137,35 +171,64 @@ public sealed class AssemblyEvents
 
 			#region Private Methods
 
-			private static void Append(StringBuilder sb, object? value)
+			private static void Append(StringBuilder sb, object? value, bool delimit = true, string? tag = null)
 			{
-				sb.Append('{');
-				if (value is string text)
+				if (delimit)
 				{
-					sb.Append(text);
-				}
-				else if (value is IDictionary dictionary)
-				{
-					foreach (DictionaryEntry entry in dictionary)
-					{
-						Append(sb, entry.Key);
-						sb.Append('=');
-						Append(sb, entry.Value);
-					}
-				}
-				else if (value is IEnumerable enumerable)
-				{
-					foreach (object? item in enumerable)
-					{
-						Append(sb, item);
-					}
-				}
-				else
-				{
-					sb.Append(value);
+					sb.Append('{');
 				}
 
-				sb.Append('}');
+				sb.Append(tag);
+
+				switch (value)
+				{
+					case string text:
+						sb.Append(text);
+						break;
+
+					case IDictionary dictionary:
+						foreach (DictionaryEntry entry in dictionary)
+						{
+							Append(sb, entry.Key, delimit: entry.Key is not string);
+							sb.Append('=');
+							Append(sb, entry.Value, delimit: entry.Value is not string);
+						}
+
+						break;
+
+					case IEnumerable enumerable:
+						foreach (object? item in enumerable)
+						{
+							Append(sb, item);
+						}
+
+						break;
+
+					case Exception ex:
+						// Some exception messages end with newlines.
+						sb.Append(ex.Message.TrimEnd());
+						if (ex.HResult != 0)
+						{
+							sb.Append(' ').Append("HResult=0x").AppendFormat("{0:X2}", ex.HResult);
+						}
+
+						if (ex.InnerException != null)
+						{
+							sb.Append(' ');
+							Append(sb, ex.InnerException);
+						}
+
+						break;
+
+					default:
+						sb.Append(value);
+						break;
+				}
+
+				if (delimit)
+				{
+					sb.Append('}');
+				}
 			}
 
 			#endregion

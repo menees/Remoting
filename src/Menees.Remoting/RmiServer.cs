@@ -50,22 +50,23 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 	/// <param name="serializer">An optional custom serializer.
 	/// Note: All connecting <see cref="RmiClient{TServiceInterface}"/> instances must use a compatible serializer.
 	/// </param>
-	/// <param name="logger">An optional logger for server status information.</param>
+	/// <param name="loggerFactory">An optional factory for creating type-specific server loggers for status information.</param>
 	public RmiServer(
 		string serverPath,
 		TServiceInterface serviceInstance,
 		int maxListeners = MaxAllowedListeners,
 		int minListeners = 1,
 		ISerializer? serializer = null,
-		ILogger<RmiServer<TServiceInterface>>? logger = null)
-		: base(serializer)
+		ILoggerFactory? loggerFactory = null)
+		: base(serializer, loggerFactory)
 	{
 		this.serviceInstance = serviceInstance;
 
 		// Note: The pipe is created with no listeners until we explicitly start them.
-		this.pipe = new(serverPath, minListeners, maxListeners, this.ProcessRequestAsync, logger ?? (ILogger)NullLogger.Instance);
+		this.pipe = new(serverPath, minListeners, maxListeners, this.ProcessRequestAsync, this.Loggers);
 
 		// TODO: Use logger for default ReportUnhandledException behavior. [Bill, 1/29/2022]
+		// TODO: Add support for CancellationToken server-side. [Bill, 1/30/2022]
 	}
 
 	#endregion
@@ -169,7 +170,22 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 			}
 		}
 
-		await response.WriteToAsync(clientStream, this.SystemSerializer).ConfigureAwait(false);
+		try
+		{
+			await response.WriteToAsync(clientStream, this.SystemSerializer).ConfigureAwait(false);
+		}
+		catch (ObjectDisposedException ex)
+		{
+			// We can get an ObjectDisposedException("Cannot access a closed pipe.")
+			// when WriteToAsync calls FlushAsync() on the stream if the client has already
+			// received all the data, processed it quickly, and closed the pipe. That's ok.
+			this.Loggers.CreateLogger(this.GetType()).LogDebug(ex, "Client closed pipe while server was finishing write.");
+		}
+		catch (Exception ex)
+		{
+			this.Loggers.CreateLogger(this.GetType()).LogError(ex, "Unhandled exception while server was finishing write.");
+			this.ReportUnhandledException?.Invoke(ex);
+		}
 	}
 
 	#endregion

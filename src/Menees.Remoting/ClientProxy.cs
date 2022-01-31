@@ -81,7 +81,6 @@ class ClientProxy<TServiceInterface> : DispatchProxy
 		}
 
 		// TODO: Explain how we could hit thread pool starvation here if we did .GetAwaiter().GetResult(). [Bill, 1/30/2022]
-		// TODO: Add support for CancellationToken "everywhere". [Bill, 1/30/2022]
 		// TODO: Use AsyncContext in unit tests. Try to simulate UI SynchronizationContext.[Bill, 1/30/2022]
 		// https://github.com/StephenCleary/AsyncEx/wiki/AsyncContext
 		//

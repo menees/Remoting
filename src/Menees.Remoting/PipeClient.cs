@@ -4,6 +4,7 @@
 
 using System.Diagnostics;
 using System.IO.Pipes;
+using Microsoft.Extensions.Logging;
 
 #endregion
 
@@ -11,8 +12,8 @@ internal sealed class PipeClient : PipeBase
 {
 	#region Constructors
 
-	internal PipeClient(string pipeName, string serverName)
-		: base(pipeName)
+	internal PipeClient(string pipeName, string serverName, ILoggerFactory loggers)
+		: base(pipeName, loggers)
 	{
 		this.ServerName = serverName;
 	}
@@ -65,17 +66,14 @@ internal sealed class PipeClient : PipeBase
 				// We'll just retry as long as we're within our overall connect timeout interval.
 				// https://stackoverflow.com/questions/23432640/namedpipeclientstream-connect-throws-system-io-filenotfoundexception-unable-t
 				// https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-waitnamedpipea?redirectedfrom=MSDN#remarks
-
-				// TODO: Log this exception at debug level. [Bill, 1/31/2022]
-				ex.GetHashCode();
+				this.Loggers.CreateLogger(this.GetType()).LogDebug(ex, "Need to retry connect since another client connected first.");
 			}
 			catch (IOException ex) when (ex.HResult == ERROR_SEM_TIMEOUT)
 			{
 				// If a very short timeout is used (e.g., 1ms), then the pipe's semaphore wait will fail
 				// with an IOException("The semaphore timeout period has expired.").
 				// https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-waitnamedpipea#remarks
-				// TODO: Log this exception at debug level. [Bill, 1/31/2022]
-				ex.GetHashCode();
+				throw new TimeoutException("Could not connect to the server due to a semaphore timeout.", ex);
 			}
 
 			remainingWaitTime = connectTimeout == TimeSpan.MaxValue ? TimeSpan.MaxValue : connectTimeout - stopwatch.Elapsed;

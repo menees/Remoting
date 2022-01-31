@@ -3,6 +3,7 @@
 #region Using Directives
 
 using System.IO.Pipes;
+using Microsoft.Extensions.Logging;
 
 #endregion
 
@@ -16,9 +17,10 @@ internal abstract class PipeBase : IDisposable
 
 	#region Constructors
 
-	protected PipeBase(string pipeName)
+	protected PipeBase(string pipeName, ILoggerFactory loggers)
 	{
 		this.PipeName = pipeName;
+		this.Loggers = loggers;
 	}
 
 	#endregion
@@ -37,6 +39,12 @@ internal abstract class PipeBase : IDisposable
 	/// Message mode is only supported on Windows, so we'll use Byte mode and frame each "message" manually.
 	/// </summary>
 	protected static PipeTransmissionMode Mode => PipeTransmissionMode.Byte;
+
+	#endregion
+
+	#region Private Protected Properties
+
+	private protected ILoggerFactory Loggers { get; }
 
 	#endregion
 

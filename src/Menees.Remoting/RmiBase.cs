@@ -3,6 +3,8 @@
 #region Using Directives
 
 using System.Reflection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Menees.Remoting.Json;
 
 #endregion
@@ -20,6 +22,7 @@ public abstract class RmiBase<TServiceInterface> : IDisposable
 	private Func<string, Type?> tryGetType = RequireGetType;
 	private ISerializer? systemSerializer;
 	private ISerializer? userSerializer;
+	private ILoggerFactory? loggerFactory;
 
 	#endregion
 
@@ -28,7 +31,7 @@ public abstract class RmiBase<TServiceInterface> : IDisposable
 	/// <summary>
 	/// Validates that <typeparamref name="TServiceInterface"/> is an interface.
 	/// </summary>
-	protected RmiBase(ISerializer? serializer)
+	protected RmiBase(ISerializer? serializer, ILoggerFactory? loggerFactory)
 	{
 		Type interfaceType = typeof(TServiceInterface);
 		if (!interfaceType.IsInterface)
@@ -37,6 +40,7 @@ public abstract class RmiBase<TServiceInterface> : IDisposable
 		}
 
 		this.userSerializer = serializer;
+		this.loggerFactory = loggerFactory;
 	}
 
 	#endregion
@@ -89,6 +93,9 @@ public abstract class RmiBase<TServiceInterface> : IDisposable
 	private protected ISerializer UserSerializer
 		=> this.userSerializer ?? this.SystemSerializer;
 
+	private protected ILoggerFactory Loggers
+		=> this.loggerFactory ?? NullLoggerFactory.Instance;
+
 	#endregion
 
 	#region Public Methods
@@ -118,6 +125,7 @@ public abstract class RmiBase<TServiceInterface> : IDisposable
 			// Allow any custom serializer to be GCed.
 			this.userSerializer = null;
 			this.systemSerializer = null;
+			this.loggerFactory = null;
 			this.disposed = true;
 		}
 	}

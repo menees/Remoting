@@ -83,7 +83,8 @@ internal sealed class PipeServerListener : IDisposable
 		catch (IOException ex)
 		{
 			// We can get "The pipe has been ended." if the client closed early.
-			this.server.Log(LogLevel.Error, ex, "Wait for pipe connection failed.");
+			LogLevel level = this.disposed ? LogLevel.Debug : LogLevel.Error;
+			this.server.Log(level, ex, "Wait for pipe connection failed.");
 		}
 		catch (ObjectDisposedException ex)
 		{

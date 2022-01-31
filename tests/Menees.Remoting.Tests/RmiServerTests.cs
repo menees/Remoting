@@ -17,7 +17,7 @@ public class RmiServerTests
 	{
 		string serverPath = typeof(string).FullName!;
 		string expected = Guid.NewGuid().ToString();
-		using RmiServer<ICloneable> server = new(serverPath, expected, logger: AssemblyEvents.CreateServerLogger<ICloneable>());
+		using RmiServer<ICloneable> server = new(serverPath, expected, loggerFactory: AssemblyEvents.Loggers);
 
 		// This is a super weak, insecure example since it just checks for the word "System".
 		server.TryGetType = typeName => typeName.Contains(nameof(System))
@@ -27,7 +27,7 @@ public class RmiServerTests
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		server.Start();
 
-		using RmiClient<ICloneable> client = new(serverPath);
+		using RmiClient<ICloneable> client = new(serverPath, loggerFactory: AssemblyEvents.Loggers);
 		ICloneable proxy = client.CreateProxy();
 		string actual = (string)proxy.Clone();
 		actual.ShouldBe(expected);
@@ -66,11 +66,11 @@ public class RmiServerTests
 	{
 		const string serverPath = nameof(this.InProcessServer);
 		InProcServerHost host = new();
-		using RmiServer<IServerHost> server = new(serverPath, host, 2, 2, logger: AssemblyEvents.CreateServerLogger<IServerHost>());
+		using RmiServer<IServerHost> server = new(serverPath, host, 2, 2, loggerFactory: AssemblyEvents.Loggers);
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		server.Start();
 
-		using RmiClient<IServerHost> client = new(serverPath);
+		using RmiClient<IServerHost> client = new(serverPath, loggerFactory: AssemblyEvents.Loggers);
 		IServerHost proxy = client.CreateProxy();
 		host.IsShutdown.ShouldBeFalse();
 		proxy.Shutdown();
@@ -103,7 +103,7 @@ public class RmiServerTests
 		string serverPath = callerMemberName ?? throw new ArgumentNullException(nameof(callerMemberName));
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(serverPath, tester, maxServerListeners, minServerListeners, logger: AssemblyEvents.CreateServerLogger<ITester>());
+		using RmiServer<ITester> server = new(serverPath, tester, maxServerListeners, minServerListeners, loggerFactory: AssemblyEvents.Loggers);
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		server.Start();
 
@@ -118,7 +118,7 @@ public class RmiServerTests
 			new ParallelOptions { MaxDegreeOfParallelism = Math.Min(clientCount, 8 * Environment.ProcessorCount) },
 			item =>
 			{
-				using RmiClient<ITester> client = new(serverPath, connectTimeout: timeout);
+				using RmiClient<ITester> client = new(serverPath, connectTimeout: timeout, loggerFactory: AssemblyEvents.Loggers);
 				ITester proxy = client.CreateProxy();
 
 				const string Prefix = "Item";
