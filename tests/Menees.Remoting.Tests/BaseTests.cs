@@ -9,35 +9,31 @@ using System.Collections;
 #endregion
 
 [TestClass]
-public sealed class AssemblyEvents
+public class BaseTests
 {
 	#region Private Data Members
 
-	private static ILoggerFactory? loggerFactory;
-	private static ImmediateConsoleLoggerProvider? consoleLoggerProvider;
+	private ILoggerFactory? loggerFactory;
+	private ImmediateConsoleLoggerProvider? consoleLoggerProvider;
 
 	#endregion
 
 	#region Public Properties
 
-	public static ILoggerFactory Loggers => loggerFactory ?? NullLoggerFactory.Instance;
+	public ILoggerFactory Loggers => this.loggerFactory ?? NullLoggerFactory.Instance;
 
 	#endregion
 
 	#region Public Initialize/Cleanup Methods
 
-	[AssemblyInitialize]
-	public static void Initialize(TestContext testContext)
+	[TestInitialize]
+	public void Initialize()
 	{
-		// We have to reference testContext to make the compiler happy,
-		// and we have to take it as a parameter for AssemblyInitialize to work.
-		testContext.GetHashCode();
-
 		// Set this to Trace to see everything logged. Console logging is slower than Debugger logging.
 		const LogLevel MinimumLogLevel = LogLevel.Debug;
 		const LogLevel ConsoleLogLevel = LogLevel.Debug;
 
-		loggerFactory = LoggerFactory.Create(builder =>
+		this.loggerFactory = LoggerFactory.Create(builder =>
 		{
 			builder.ClearProviders();
 
@@ -46,6 +42,7 @@ public sealed class AssemblyEvents
 			// Make the messages show up in the debugger's Output window.
 			builder.AddDebug();
 
+			// TODO: Do we still need a custom provider, or will a custom formatter do? [Bill, 1/31/2022]
 			// Note: We can't use any of the AddConsole methods from Microsoft.Extensions.Logging.Console because
 			// they all buffer the formatted lines in a worker queue, and the lines won't show up in the correct unit test
 			// due to the way MSTest attaches and detaches from stdout and stderr for each test.
@@ -56,16 +53,18 @@ public sealed class AssemblyEvents
 			// Another workaround is to use a better logging system like Serilog.Sinks.Console, but it's internal buffering
 			// can still show output in the wrong test. Or we can just use a simple local provider like
 			// ImmediateConsoleLoggerProvider that does no buffering. It's predictable but slow. :-(
-			consoleLoggerProvider = new ImmediateConsoleLoggerProvider(ConsoleLogLevel);
-			builder.AddProvider(consoleLoggerProvider);
+			this.consoleLoggerProvider = new ImmediateConsoleLoggerProvider(ConsoleLogLevel);
+			builder.AddProvider(this.consoleLoggerProvider);
 		});
 	}
 
-	[AssemblyCleanup]
-	public static void Cleanup()
+	[TestCleanup]
+	public void Cleanup()
 	{
-		loggerFactory?.Dispose();
-		consoleLoggerProvider?.Dispose();
+		this.loggerFactory?.Dispose();
+		this.loggerFactory = null;
+		this.consoleLoggerProvider?.Dispose();
+		this.consoleLoggerProvider = null;
 	}
 
 	#endregion
