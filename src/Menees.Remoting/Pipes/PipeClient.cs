@@ -66,7 +66,7 @@ internal sealed class PipeClient : PipeBase
 				// We'll just retry as long as we're within our overall connect timeout interval.
 				// https://stackoverflow.com/questions/23432640/namedpipeclientstream-connect-throws-system-io-filenotfoundexception-unable-t
 				// https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-waitnamedpipea?redirectedfrom=MSDN#remarks
-				this.Loggers.CreateLogger(this.GetType()).LogDebug(ex, "Need to retry connect since another client connected first.");
+				this.Logger.LogDebug(ex, "Retry connect since another client connected first.");
 			}
 			catch (IOException ex) when (ex.HResult == ERROR_SEM_TIMEOUT)
 			{

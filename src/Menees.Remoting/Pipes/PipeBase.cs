@@ -11,6 +11,7 @@ internal abstract class PipeBase : IDisposable
 {
 	#region Private Data Members
 
+	private IDisposable? logScope;
 	private bool disposed;
 
 	#endregion
@@ -21,6 +22,8 @@ internal abstract class PipeBase : IDisposable
 	{
 		this.PipeName = pipeName;
 		this.Loggers = loggers;
+		this.Logger = loggers.CreateLogger(this.GetType());
+		this.logScope = this.Logger.BeginScope(this.CreateScope());
 	}
 
 	#endregion
@@ -44,6 +47,8 @@ internal abstract class PipeBase : IDisposable
 
 	#region Private Protected Properties
 
+	private protected ILogger Logger { get; }
+
 	private protected ILoggerFactory Loggers { get; }
 
 	#endregion
@@ -56,6 +61,13 @@ internal abstract class PipeBase : IDisposable
 		this.Dispose(disposing: true);
 		GC.SuppressFinalize(this);
 	}
+
+	#endregion
+
+	#region Internal Methods
+
+	internal Dictionary<string, object> CreateScope()
+		=> new() { { nameof(this.PipeName), this.PipeName } };
 
 	#endregion
 
@@ -82,13 +94,12 @@ internal abstract class PipeBase : IDisposable
 	{
 		if (!this.disposed)
 		{
-			// if (disposing)
-			// {
-				// dispose managed state (managed objects)
-			// }
-			//
-			// free unmanaged resources (unmanaged objects) and override finalizer
-			// set large fields to null
+			if (disposing)
+			{
+				this.logScope?.Dispose();
+				this.logScope = null;
+			}
+
 			this.disposed = true;
 		}
 	}

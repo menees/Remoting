@@ -4,7 +4,10 @@
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Console;
+using Microsoft.Extensions.Options;
 using System.Collections;
+using System.IO;
 
 #endregion
 
@@ -14,7 +17,6 @@ public class BaseTests
 	#region Private Data Members
 
 	private ILoggerFactory? loggerFactory;
-	private ImmediateConsoleLoggerProvider? consoleLoggerProvider;
 
 	#endregion
 
@@ -31,7 +33,6 @@ public class BaseTests
 	{
 		// Set this to Trace to see everything logged. Console logging is slower than Debugger logging.
 		const LogLevel MinimumLogLevel = LogLevel.Debug;
-		const LogLevel ConsoleLogLevel = LogLevel.Debug;
 
 		this.loggerFactory = LoggerFactory.Create(builder =>
 		{
@@ -42,7 +43,6 @@ public class BaseTests
 			// Make the messages show up in the debugger's Output window.
 			builder.AddDebug();
 
-			// TODO: Do we still need a custom provider, or will a custom formatter do? [Bill, 1/31/2022]
 			// Note: We can't use any of the AddConsole methods from Microsoft.Extensions.Logging.Console because
 			// they all buffer the formatted lines in a worker queue, and the lines won't show up in the correct unit test
 			// due to the way MSTest attaches and detaches from stdout and stderr for each test.
@@ -50,11 +50,13 @@ public class BaseTests
 			// https://github.com/dotnet/runtime/blob/main/src/libraries/Microsoft.Extensions.Logging.Console/src/ConsoleLogger.cs#L61
 			//
 			// One workaround is to (re)create the logger factory and dispose of it in every test, but that's tedious.
-			// Another workaround is to use a better logging system like Serilog.Sinks.Console, but it's internal buffering
-			// can still show output in the wrong test. Or we can just use a simple local provider like
-			// ImmediateConsoleLoggerProvider that does no buffering. It's predictable but slow. :-(
-			this.consoleLoggerProvider = new ImmediateConsoleLoggerProvider(ConsoleLogLevel);
-			builder.AddProvider(this.consoleLoggerProvider);
+			builder.AddConsoleFormatter<CustomConsoleFormatter, ConsoleFormatterOptions>(options =>
+			{
+				options.IncludeScopes = true;
+				options.TimestampFormat = "HH:mm:ss.fff ";
+			});
+
+			builder.AddConsole(options => options.FormatterName = nameof(CustomConsoleFormatter));
 		});
 	}
 
@@ -63,207 +65,145 @@ public class BaseTests
 	{
 		this.loggerFactory?.Dispose();
 		this.loggerFactory = null;
-		this.consoleLoggerProvider?.Dispose();
-		this.consoleLoggerProvider = null;
 	}
 
 	#endregion
 
 	#region Private Types
 
-	private sealed class ImmediateConsoleLoggerProvider : ILoggerProvider
+	private sealed class CustomConsoleFormatter : ConsoleFormatter
 	{
 		#region Private Data Members
 
-		private readonly LogLevel minLevel;
+		private readonly ConsoleFormatterOptions options;
 
 		#endregion
 
 		#region Constructors
 
-		public ImmediateConsoleLoggerProvider(LogLevel minLevel)
+		public CustomConsoleFormatter(IOptionsMonitor<ConsoleFormatterOptions> options)
+			: base(nameof(CustomConsoleFormatter))
 		{
-			this.minLevel = minLevel;
+			this.options = options.CurrentValue;
 		}
 
 		#endregion
 
 		#region Public Methods
 
-		public ILogger CreateLogger(string categoryName) => new ImmediateConsoleLogger(categoryName, this.minLevel);
-
-		public void Dispose()
+		public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider scopeProvider, TextWriter textWriter)
 		{
+			StringBuilder sb = new();
+			DateTime time = this.options.UseUtcTimestamp ? DateTime.UtcNow : DateTime.Now;
+			sb.Append('[').Append(time.ToString(this.options.TimestampFormat ?? "HH:mm:ss "));
+			string levelName = logEntry.LogLevel switch
+			{
+				LogLevel.Trace => "TRC",
+				LogLevel.Debug => "DBG",
+				LogLevel.Information => "INF",
+				LogLevel.Warning => "WRN",
+				LogLevel.Error => "ERR",
+				LogLevel.Critical => "CRT",
+				LogLevel.None => "NON",
+				_ => logEntry.LogLevel.ToString(),
+			};
+			sb.Append(levelName).Append("] ");
+
+			if (logEntry.EventId.Id != 0)
+			{
+				sb.Append('#').Append(logEntry.EventId.Id).Append(' ');
+			}
+
+			sb.Append(logEntry.Category).Append(' ');
+
+			string message = logEntry.Formatter?.Invoke(logEntry.State, null) ?? string.Empty;
+			sb.Append(message);
+			if (logEntry.Exception != null)
+			{
+				sb.Append(' ');
+				Append(sb, logEntry.Exception, tag: "Exception: ");
+			}
+
+			if (this.options.IncludeScopes)
+			{
+				scopeProvider.ForEachScope(
+					(scope, stringBuilder) =>
+					{
+						stringBuilder.Append(' ');
+						Append(stringBuilder, scope);
+					},
+					sb);
+			}
+
+			string line = sb.ToString();
+			textWriter.WriteLine(line);
 		}
 
 		#endregion
 
-		private sealed class ImmediateConsoleLogger : ILogger
+		#region Private Methods
+
+		private static void Append(StringBuilder sb, object? value, bool delimit = true, string? tag = null)
 		{
-			#region Private Data Members
-
-			private readonly string categoryName;
-			private readonly LogLevel minLevel;
-			private readonly ThreadLocal<Stack<object?>> threadScope = new(() => new());
-
-			#endregion
-
-			#region Constructors
-
-			public ImmediateConsoleLogger(string categoryName, LogLevel minLevel)
+			if (delimit)
 			{
-				this.categoryName = categoryName;
-				this.minLevel = minLevel;
+				sb.Append('{');
 			}
 
-			#endregion
+			sb.Append(tag);
 
-			#region Public Methods
-
-			public IDisposable BeginScope<TState>(TState state)
-				=> new Scope(this.threadScope.Value!, state);
-
-			public bool IsEnabled(LogLevel logLevel) => logLevel >= this.minLevel;
-
-			public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+			switch (value)
 			{
-				string levelName = logLevel switch
-				{
-					LogLevel.Trace => "TRC",
-					LogLevel.Debug => "DBG",
-					LogLevel.Information => "INF",
-					LogLevel.Warning => "WRN",
-					LogLevel.Error => "ERR",
-					LogLevel.Critical => "CRT",
-					LogLevel.None => "NON",
-					_ => logLevel.ToString(),
-				};
+				case string text:
+					sb.Append(text);
+					break;
 
-				StringBuilder sb = new();
-				sb.AppendFormat("[{0:HH:mm:ss.fff} {1}] ", DateTime.Now, levelName);
-				if (eventId.Id != 0)
-				{
-					sb.Append('#').Append(eventId.Id).Append(' ');
-				}
+				case IDictionary dictionary:
+					foreach (DictionaryEntry entry in dictionary)
+					{
+						Append(sb, entry.Key, delimit: entry.Key is not string);
+						sb.Append('=');
+						Append(sb, entry.Value, delimit: entry.Value is not string);
+					}
 
-				sb.Append(this.categoryName).Append(' ');
+					break;
 
-				string message = formatter(state, null);
-				sb.Append(message);
-				if (exception != null)
-				{
-					sb.Append(' ');
-					Append(sb, exception, tag: "Exception: ");
-				}
+				case IEnumerable enumerable:
+					foreach (object? item in enumerable)
+					{
+						Append(sb, item);
+					}
 
-				foreach (object? value in this.threadScope.Value!)
-				{
-					sb.Append(' ');
-					Append(sb, value);
-				}
+					break;
 
-				string line = sb.ToString();
-				Console.WriteLine(line);
+				case Exception ex:
+					// Some exception messages end with newlines.
+					sb.Append(ex.Message.TrimEnd());
+					if (ex.HResult != 0)
+					{
+						sb.Append(' ').Append("HResult=0x").AppendFormat("{0:X2}", ex.HResult);
+					}
+
+					if (ex.InnerException != null)
+					{
+						sb.Append(' ');
+						Append(sb, ex.InnerException);
+					}
+
+					break;
+
+				default:
+					sb.Append(value);
+					break;
 			}
 
-			#endregion
-
-			#region Private Methods
-
-			private static void Append(StringBuilder sb, object? value, bool delimit = true, string? tag = null)
+			if (delimit)
 			{
-				if (delimit)
-				{
-					sb.Append('{');
-				}
-
-				sb.Append(tag);
-
-				switch (value)
-				{
-					case string text:
-						sb.Append(text);
-						break;
-
-					case IDictionary dictionary:
-						foreach (DictionaryEntry entry in dictionary)
-						{
-							Append(sb, entry.Key, delimit: entry.Key is not string);
-							sb.Append('=');
-							Append(sb, entry.Value, delimit: entry.Value is not string);
-						}
-
-						break;
-
-					case IEnumerable enumerable:
-						foreach (object? item in enumerable)
-						{
-							Append(sb, item);
-						}
-
-						break;
-
-					case Exception ex:
-						// Some exception messages end with newlines.
-						sb.Append(ex.Message.TrimEnd());
-						if (ex.HResult != 0)
-						{
-							sb.Append(' ').Append("HResult=0x").AppendFormat("{0:X2}", ex.HResult);
-						}
-
-						if (ex.InnerException != null)
-						{
-							sb.Append(' ');
-							Append(sb, ex.InnerException);
-						}
-
-						break;
-
-					default:
-						sb.Append(value);
-						break;
-				}
-
-				if (delimit)
-				{
-					sb.Append('}');
-				}
+				sb.Append('}');
 			}
-
-			#endregion
-
-			#region Private Types
-
-			private sealed class Scope : IDisposable
-			{
-				#region Private Data Members
-
-				private readonly Stack<object?> scope;
-
-				#endregion
-
-				#region Constructors
-
-				public Scope(Stack<object?> scope, object? state)
-				{
-					this.scope = scope;
-					this.scope.Push(state);
-				}
-
-				#endregion
-
-				#region Public Methods
-
-				public void Dispose()
-				{
-					this.scope.Pop();
-				}
-
-				#endregion
-			}
-
-			#endregion
 		}
+
+		#endregion
 	}
 
 	#endregion
