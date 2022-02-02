@@ -238,6 +238,7 @@ public class BaseTests
 			{
 				#region Private Data Members
 
+				private readonly object monitor = new object();
 				private Stack<object?>? scope;
 
 				#endregion
@@ -256,8 +257,17 @@ public class BaseTests
 
 				public void Dispose()
 				{
-					this.scope?.Pop();
-					this.scope = null;
+					// Protect against simultaneous multi-threaded disposal (e.g., PipeServerListener.Dispose()).
+					lock (this.monitor)
+					{
+						Stack<object?>? stack = this.scope;
+						this.scope = null;
+
+						if (stack?.Count > 0)
+						{
+							stack.Pop();
+						}
+					}
 				}
 
 				#endregion
