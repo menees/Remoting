@@ -80,17 +80,7 @@ class ClientProxy<TServiceInterface> : DispatchProxy
 			throw new ArgumentNullException(nameof(targetMethod));
 		}
 
-		// TODO: Explain how we could hit thread pool starvation here if we did .GetAwaiter().GetResult(). [Bill, 1/30/2022]
-		// TODO: Use AsyncContext in unit tests. Try to simulate UI SynchronizationContext.[Bill, 1/30/2022]
-		// https://github.com/StephenCleary/AsyncEx/wiki/AsyncContext
-		//
-		// Stephen Toub discusses "What if I really do need 'sync over async'?" in a blog article. Under "Avoid Unnecessary Marshaling"
-		// he talks about how libraries should use ConfigureAwait(false) on every await. Since we do that, we know this InvokeAsync
-		// will not deadlock waiting on the calling thread's SynchronizationContext (if there is one).
-		// https://devblogs.microsoft.com/pfxteam/should-i-expose-synchronous-wrappers-for-asynchronous-methods/
-		// https://blog.stephencleary.com/2012/07/dont-block-on-async-code.html (related)
-		//
-		// https://docs.microsoft.com/en-us/archive/msdn-magazine/2015/july/async-programming-brownfield-async-development#the-blocking-hack
+		// This requires a synchronous call from the client to avoid deadlocks since DispatchProxy.Invoke is synchronous.
 		object? result = this.client.Invoke(targetMethod, args ?? Array.Empty<object?>());
 		return result;
 	}

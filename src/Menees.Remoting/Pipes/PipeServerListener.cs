@@ -43,12 +43,12 @@ internal sealed class PipeServerListener : IDisposable
 
 	public void Dispose()
 	{
+		// Note: This method can be called multiple times if a listener is finishing and self-disposes on one thread,
+		// and the server finishes and disposes its remaining listeners from another thread.
 		if (!this.disposed)
 		{
 			this.disposed = true;
 			this.State = ListenerState.Disposed;
-			this.logScope?.Dispose();
-			this.logScope = null;
 
 			if (this.pipe.IsConnected)
 			{
@@ -72,6 +72,9 @@ internal sealed class PipeServerListener : IDisposable
 			{
 				this.logger.LogError(ex, "Exception disposing listener.");
 			}
+
+			this.logScope?.Dispose();
+			this.logScope = null;
 		}
 	}
 
@@ -90,17 +93,17 @@ internal sealed class PipeServerListener : IDisposable
 		{
 			// We can get "The pipe has been ended." if the client closed early.
 			LogLevel level = this.disposed ? LogLevel.Debug : LogLevel.Error;
-			this.logger.Log(level, ex, "Wait for pipe connection failed.");
+			this.logger.Log(level, ex, "Wait for pipe connection failed."); // Note: this.logScope may be disposed already.
 		}
 		catch (ObjectDisposedException ex)
 		{
 			// We'll get "Cannot access a closed pipe." under normal conditions when the server is disposed.
 			LogLevel level = this.disposed ? LogLevel.Trace : LogLevel.Debug;
-			this.logger.Log(level, ex, "Listener disposed while waiting for pipe.");
+			this.logger.Log(level, ex, "Listener disposed while waiting for pipe."); // Note: this.logScope may be disposed already.
 		}
 		catch (Exception ex)
 		{
-			this.logger.Log(LogLevel.Error, ex, "Unhandled exception waiting for pipe connection.");
+			this.logger.Log(LogLevel.Error, ex, "Unhandled exception waiting for pipe connection."); // Note: this.logScope may be disposed already.
 			this.server.ReportUnhandledException?.Invoke(ex);
 		}
 
