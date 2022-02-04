@@ -2,6 +2,7 @@
 
 #region Using Directives
 
+using System.ComponentModel;
 using System.Reflection;
 
 #endregion
@@ -12,17 +13,16 @@ using System.Reflection;
 /// <remarks>
 /// DispatchProxy.Create requires this type to be un-sealed.
 /// <para/>
-/// It's also required to be public for .NET Framework until we can reference v6.0.0 of DispatchProxy containing
-/// fix 30917. As of Jan 26, 2022, v6.0.0 is still not publically available on NuGet even though the fix was in
-/// 6.0.0-preview.3.21152.1 as of Mar 4, 2021 per AArnott. The v6 libraray is available to .NET 6 builds via
-/// the SDK, but it's not available as a NuGet package for a .NET Framework target. :-(
+/// It's also required to be public for .NET Framework since we can't reference v6.0.0 of DispatchProxy containing fix 30917.
 /// https://github.com/dotnet/runtime/issues/30917
+/// https://github.com/dotnet/runtime/discussions/64726#discussioncomment-2113733
 /// <para/>
-/// Note: Since this library is strongly-named, it can't used the InternalsVisibleTo("ProxyBuilder") hack.
+/// Note: Since this library is strongly-named, it can't use the InternalsVisibleTo("ProxyBuilder") hack.
 /// https://github.com/dotnet/runtime/issues/25595#issuecomment-546330898
 /// </remarks>
 /// <typeparam name="TServiceInterface"></typeparam>
 #if NETFRAMEWORK
+[EditorBrowsable(EditorBrowsableState.Never)]
 public
 #else
 internal
@@ -43,7 +43,6 @@ class ClientProxy<TServiceInterface> : DispatchProxy
 	/// </summary>
 	public ClientProxy()
 	{
-		// TODO: Log issue to get v6.0.0 of DispatchProxy published. [Bill, 1/30/2022]
 		// Note: DispatchProxy.Create requires a public default constructor for this.
 	}
 
@@ -68,7 +67,7 @@ class ClientProxy<TServiceInterface> : DispatchProxy
 	/// <returns></returns>
 	/// <exception cref="InvalidOperationException"></exception>
 	/// <exception cref="ArgumentNullException"></exception>
-	protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+	protected sealed override object? Invoke(MethodInfo? targetMethod, object?[]? args)
 	{
 		if (this.client == null)
 		{
