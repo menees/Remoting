@@ -18,15 +18,6 @@ using Microsoft.Extensions.Logging;
 public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, IRmiServer
 	where TServiceInterface : class
 {
-	#region Public Constants
-
-	/// <summary>
-	/// Represents the maximum number of server instances that the system resources allow.
-	/// </summary>
-	public const int MaxAllowedListeners = NamedPipeServerStream.MaxAllowedServerInstances;
-
-	#endregion
-
 	#region Private Data Members
 
 	private static readonly Dictionary<string, MethodInfo> MethodSignatureCache =
@@ -41,30 +32,47 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 	#region Constructors
 
 	/// <summary>
-	/// Creates a new server instance with the specified name
+	/// Creates a new server instance to expose a <typeparamref name="TServiceInterface"/> implementation
+	/// to <see cref="RmiClient{TServiceInterface}"/> instances.
 	/// </summary>
+	/// <param name="serviceInstance">An instance of <typeparamref name="TServiceInterface"/> on which to execute remote invocations.</param>
 	/// <param name="serverPath">The path used to expose the service.</param>
-	/// <param name="serviceInstance">An instance of <typeparamref name="TServiceInterface"/> on which to execute remote invocations.
-	/// </param>
 	/// <param name="maxListeners">The maximum number of server listener tasks to start.</param>
 	/// <param name="minListeners">The minimim number of server listener tasks to start.</param>
-	/// <param name="serializer">An optional custom serializer.
-	/// Note: All connecting <see cref="RmiClient{TServiceInterface}"/> instances must use a compatible serializer.
-	/// </param>
 	/// <param name="loggerFactory">An optional factory for creating type-specific server loggers for status information.</param>
 	public RmiServer(
-		string serverPath,
 		TServiceInterface serviceInstance,
-		int maxListeners = MaxAllowedListeners,
+		string serverPath,
+		int maxListeners = ServerSettings.MaxAllowedListeners,
 		int minListeners = 1,
-		ISerializer? serializer = null,
 		ILoggerFactory? loggerFactory = null)
-		: base(serializer, loggerFactory)
+		: this(serviceInstance, new ServerSettings(serverPath)
+		{
+			MaxListeners = maxListeners,
+			MinListeners = minListeners,
+			LoggerFactory = loggerFactory,
+		})
 	{
+	}
+
+	/// <summary>
+	/// Creates a new server instance to expose a <typeparamref name="TServiceInterface"/> implementation
+	/// to <see cref="RmiClient{TServiceInterface}"/> instances.
+	/// </summary>
+	/// <param name="serviceInstance">An instance of <typeparamref name="TServiceInterface"/> on which to execute remote invocations.</param>
+	/// <param name="settings">Parameters used to initialize this instance.</param>
+	public RmiServer(TServiceInterface serviceInstance, ServerSettings settings)
+		: base(settings)
+	{
+		if (settings == null)
+		{
+			throw new ArgumentNullException(nameof(settings));
+		}
+
 		this.serviceInstance = serviceInstance;
 
 		// Note: The pipe is created with no listeners until we explicitly start them.
-		this.pipe = new(serverPath, minListeners, maxListeners, this.ProcessRequestAsync, this.Loggers);
+		this.pipe = new(settings.ServerPath, settings.MinListeners, settings.MaxListeners, this.ProcessRequestAsync, this.Loggers);
 
 		// TODO: Use logger for default ReportUnhandledException behavior. [Bill, 1/29/2022]
 		// TODO: Add support for CancellationToken server-side. [Bill, 1/30/2022]

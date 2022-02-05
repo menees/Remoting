@@ -28,34 +28,41 @@ public sealed class RmiClient<TServiceInterface> : RmiBase<TServiceInterface>
 	/// Creates a new client instance to invoke methods on a <see cref="RmiServer{TServiceInterface}"/> instance.
 	/// </summary>
 	/// <param name="serverPath">The path used to expose the service.</param>
-	/// <param name="serverHost">The name of the remote server machine. Use "." for the local system.</param>
-	/// <param name="serializer">An optional custom serializer.
-	/// Note: The associated <see cref="RmiServer{TServiceInterface}"/> instance must use a compatible serializer.
-	/// </param>
 	/// <param name="connectTimeout">The interval to wait for a connection to a remote <see cref="RmiServer{TServiceInterface}"/>.
-	/// If null, then <see cref="DefaultConnectTimeout"/> is used.
+	/// If null, then <see cref="ClientSettings.DefaultConnectTimeout"/> is used.
 	/// </param>
 	/// <param name="loggerFactory">An optional factory for creating type-specific server loggers for status information.</param>
 	public RmiClient(
 		string serverPath,
-		string serverHost = ".",
-		ISerializer? serializer = null,
 		TimeSpan? connectTimeout = null,
 		ILoggerFactory? loggerFactory = null)
-		: base(serializer, loggerFactory)
+		: this(new ClientSettings(serverPath)
+		{
+			ConnectTimeout = connectTimeout ?? ClientSettings.DefaultConnectTimeout,
+			LoggerFactory = loggerFactory,
+		})
 	{
-		this.ConnectTimeout = connectTimeout ?? DefaultConnectTimeout;
-		this.pipe = new(serverPath, serverHost, this.Loggers);
+	}
+
+	/// <summary>
+	/// Creates a new client instance to invoke methods on a <see cref="RmiServer{TServiceInterface}"/> instance.
+	/// </summary>
+	/// <param name="settings">Parameters used to initialize this instance.</param>
+	public RmiClient(ClientSettings settings)
+		: base(settings)
+	{
+		if (settings == null)
+		{
+			throw new ArgumentNullException(nameof(settings));
+		}
+
+		this.ConnectTimeout = settings.ConnectTimeout;
+		this.pipe = new(settings.ServerPath, settings.ServerHost, this.Loggers);
 	}
 
 	#endregion
 
 	#region Public Properties
-
-	/// <summary>
-	/// Gets the default interval to wait for a connection to a remote <see cref="RmiServer{TServiceInterface}"/>.
-	/// </summary>
-	public static TimeSpan DefaultConnectTimeout { get; } = TimeSpan.FromMinutes(1);
 
 	/// <summary>
 	/// Gets the interval to wait for a connection to a remote <see cref="RmiServer{TServiceInterface}"/>.

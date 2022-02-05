@@ -18,6 +18,7 @@ internal sealed class UserSerializedValue
 
 	internal UserSerializedValue(Type dataType, object? value, ISerializer userSerializer)
 	{
+		// TODO: If userSerializer is null then just store value. [Bill, 2/5/2022]
 		this.DataType = dataType;
 		this.SerializerId = userSerializer.GetType().AssemblyQualifiedName;
 		if (dataType != typeof(void))
@@ -32,6 +33,7 @@ internal sealed class UserSerializedValue
 
 	public Type DataType { get; set; } = typeof(object);
 
+	// TODO: Support object? instead of byte[]? for SerializedValue. [Bill, 2/5/2022]
 	public byte[]? SerializedValue { get; set; }
 
 	public string? SerializerId { get; set; }
@@ -42,6 +44,7 @@ internal sealed class UserSerializedValue
 
 	public object? DeserializeValue(ISerializer userSerializer)
 	{
+		// TODO: If userSerializer is null then just return value. [Bill, 2/5/2022]
 		string? deserializerId = GetId(userSerializer);
 		if (deserializerId != this.SerializerId)
 		{

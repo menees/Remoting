@@ -31,7 +31,8 @@ public abstract class RmiBase<TServiceInterface> : IDisposable
 	/// <summary>
 	/// Validates that <typeparamref name="TServiceInterface"/> is an interface.
 	/// </summary>
-	protected RmiBase(ISerializer? serializer, ILoggerFactory? loggerFactory)
+	/// <param name="settings">Parameters used to initialize this instance.</param>
+	protected RmiBase(BaseSettings settings)
 	{
 		Type interfaceType = typeof(TServiceInterface);
 		if (!interfaceType.IsInterface)
@@ -39,8 +40,8 @@ public abstract class RmiBase<TServiceInterface> : IDisposable
 			throw new ArgumentException($"{nameof(TServiceInterface)} {interfaceType.FullName} must be an interface type.");
 		}
 
-		this.userSerializer = serializer;
-		this.loggerFactory = loggerFactory;
+		this.userSerializer = settings?.Serializer;
+		this.loggerFactory = settings?.LoggerFactory;
 	}
 
 	#endregion

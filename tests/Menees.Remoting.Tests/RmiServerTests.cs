@@ -17,7 +17,7 @@ public class RmiServerTests : BaseTests
 	{
 		string serverPath = typeof(string).FullName!;
 		string expected = Guid.NewGuid().ToString();
-		using RmiServer<ICloneable> server = new(serverPath, expected, loggerFactory: this.Loggers);
+		using RmiServer<ICloneable> server = new(expected, serverPath, loggerFactory: this.Loggers);
 
 		// This is a super weak, insecure example since it just checks for the word "System".
 		server.TryGetType = typeName => typeName.Contains(nameof(System))
@@ -58,7 +58,7 @@ public class RmiServerTests : BaseTests
 	public void UnlimitedServerMedium()
 	{
 		// Run 500 clients that will have to wait on the available server listeners.
-		this.TestCombine(1, RmiServer<ITester>.MaxAllowedListeners, 500);
+		this.TestCombine(1, ServerSettings.MaxAllowedListeners, 500);
 	}
 
 	[TestMethod]
@@ -66,7 +66,7 @@ public class RmiServerTests : BaseTests
 	{
 		const string serverPath = nameof(this.InProcessServer);
 		InProcServerHost host = new();
-		using RmiServer<IServerHost> server = new(serverPath, host, 2, 2, loggerFactory: this.Loggers);
+		using RmiServer<IServerHost> server = new(host, serverPath, 2, 2, loggerFactory: this.Loggers);
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		server.Start();
 
@@ -165,7 +165,7 @@ public class RmiServerTests : BaseTests
 		string serverPath = callerMemberName ?? throw new ArgumentNullException(nameof(callerMemberName));
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(serverPath, tester, maxServerListeners, minServerListeners, loggerFactory: this.Loggers);
+		using RmiServer<ITester> server = new(tester, serverPath, maxServerListeners, minServerListeners, loggerFactory: this.Loggers);
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		server.Start();
 
@@ -174,7 +174,7 @@ public class RmiServerTests : BaseTests
 
 	private void TestCombine(int clientCount, string serverPath)
 	{
-		TimeSpan timeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : RmiClient<ITester>.DefaultConnectTimeout;
+		TimeSpan timeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : ClientSettings.DefaultConnectTimeout;
 		Parallel.ForEach(
 			Enumerable.Range(1, clientCount),
 			new ParallelOptions { MaxDegreeOfParallelism = Math.Min(clientCount, 8 * Environment.ProcessorCount) },

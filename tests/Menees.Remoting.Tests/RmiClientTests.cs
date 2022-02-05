@@ -10,7 +10,7 @@ public class RmiClientTests : BaseTests
 	{
 		using (RmiClient<IServerHost> client = new(this.GetType().FullName!, loggerFactory: this.Loggers))
 		{
-			client.ConnectTimeout.ShouldBe(RmiClient<IServerHost>.DefaultConnectTimeout);
+			client.ConnectTimeout.ShouldBe(ClientSettings.DefaultConnectTimeout);
 		}
 
 		using (RmiClient<IServerHost> client = new(this.GetType().FullName!, connectTimeout: TimeSpan.FromSeconds(1), loggerFactory: this.Loggers))
@@ -29,7 +29,7 @@ public class RmiClientTests : BaseTests
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(ServerPath, tester, loggerFactory: this.Loggers);
+		using RmiServer<ITester> server = new(tester, ServerPath, loggerFactory: this.Loggers);
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 
@@ -62,7 +62,7 @@ public class RmiClientTests : BaseTests
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(ServerPath, tester, loggerFactory: this.Loggers);
+		using RmiServer<ITester> server = new(tester, ServerPath, loggerFactory: this.Loggers);
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 
@@ -73,5 +73,6 @@ public class RmiClientTests : BaseTests
 		testerProxy.Combine("Proxy", " still ", "works.").ShouldBe("Proxy still works.");
 	}
 
+	// TODO: Add tests with custom serializer. [Bill, 2/5/2022]
 	#endregion
 }

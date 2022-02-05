@@ -48,13 +48,18 @@ else
 				Type serverType = typeof(RmiServer<>).MakeGenericType(interfaceType);
 
 				string targetServerPath = serverPathPrefix + interfaceType.Name;
+				ServerSettings targetServerSettings = new(targetServerPath)
+				{
+					MaxListeners = maxListeners,
+					MinListeners = minListeners,
+					LoggerFactory = logManager.Loggers,
+				};
 				object serviceInstance = Activator.CreateInstance(serviceType)!;
-				using IRmiServer server = (IRmiServer)Activator.CreateInstance(
-					serverType, targetServerPath, serviceInstance, maxListeners, minListeners, null, logManager.Loggers)!;
+				using IRmiServer server = (IRmiServer)Activator.CreateInstance(serverType, serviceInstance, targetServerSettings)!;
 
 				string hostServerPath = serverPathPrefix + nameof(IServerHost);
 				ServerHostManager manager = new();
-				using RmiServer<IServerHost> managerServer = new(hostServerPath, manager, 1, loggerFactory: logManager.Loggers);
+				using RmiServer<IServerHost> managerServer = new(manager, hostServerPath, 1, loggerFactory: logManager.Loggers);
 
 				server.Start();
 				managerServer.Start();
