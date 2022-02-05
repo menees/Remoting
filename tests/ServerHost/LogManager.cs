@@ -8,8 +8,7 @@ using System.Collections;
 
 #endregion
 
-[TestClass]
-public class BaseTests
+public sealed class LogManager : IDisposable
 {
 	#region Private Data Members
 
@@ -18,26 +17,15 @@ public class BaseTests
 
 	#endregion
 
-	#region Public Properties
+	#region Constructors
 
-	public ILoggerFactory Loggers => this.loggerFactory ?? NullLoggerFactory.Instance;
-
-	#endregion
-
-	#region Public Initialize/Cleanup Methods
-
-	[TestInitialize]
-	public void Initialize()
+	public LogManager(LogLevel minimumLogLevel = LogLevel.Debug, LogLevel consoleLogLevel = LogLevel.Debug)
 	{
-		// Set this to Trace to see everything logged. Console logging is slower than Debugger logging.
-		const LogLevel MinimumLogLevel = LogLevel.Debug;
-		const LogLevel ConsoleLogLevel = LogLevel.Debug;
-
 		this.loggerFactory = LoggerFactory.Create(builder =>
 		{
 			builder.ClearProviders();
 
-			builder.SetMinimumLevel(MinimumLogLevel);
+			builder.SetMinimumLevel(minimumLogLevel);
 
 			// Make the messages show up in the debugger's Output window.
 			builder.AddDebug();
@@ -49,13 +37,22 @@ public class BaseTests
 			// https://codeburst.io/unit-testing-with-net-core-ilogger-t-e8c16c503a80
 			// So I wrote my own ImmediateConsoleLoggerProvider that's aware of async call contexts.
 			// But since it doesn't do any buffering, it is very slow on large tests!
-			this.consoleLoggerProvider = new ImmediateConsoleLoggerProvider(ConsoleLogLevel);
+			this.consoleLoggerProvider = new ImmediateConsoleLoggerProvider(consoleLogLevel);
 			builder.AddProvider(this.consoleLoggerProvider);
 		});
 	}
 
-	[TestCleanup]
-	public void Cleanup()
+	#endregion
+
+	#region Public Properties
+
+	public ILoggerFactory Loggers => this.loggerFactory ?? NullLoggerFactory.Instance;
+
+	#endregion
+
+	#region Public Initialize/Cleanup Methods
+
+	public void Dispose()
 	{
 		this.loggerFactory?.Dispose();
 		this.loggerFactory = null;
@@ -238,7 +235,7 @@ public class BaseTests
 			{
 				#region Private Data Members
 
-				private readonly object monitor = new object();
+				private readonly object monitor = new();
 				private Stack<object?>? scope;
 
 				#endregion
