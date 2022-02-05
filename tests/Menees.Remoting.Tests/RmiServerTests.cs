@@ -72,15 +72,77 @@ public class RmiServerTests : BaseTests
 
 		using RmiClient<IServerHost> client = new(serverPath, loggerFactory: this.Loggers);
 		IServerHost proxy = client.CreateProxy();
-		host.IsShutdown.ShouldBeFalse();
+		host.IsReady.ShouldBeTrue();
 		proxy.Shutdown();
-		host.IsShutdown.ShouldBeTrue();
+		host.IsReady.ShouldBeFalse();
 	}
 
 	[TestMethod]
 	public void CrossProcessServer()
 	{
-		// TODO: Launch ServerHost process with ServerHostManager service. [Bill, 1/29/2022]
+		string serverHostLocation = typeof(IServerHost).Assembly.Location;
+
+		ProcessStartInfo startInfo = new();
+		List<string> arguments = new();
+		if (string.Equals(Path.GetExtension(serverHostLocation), ".exe", StringComparison.OrdinalIgnoreCase))
+		{
+			startInfo.FileName = Path.GetFileName(serverHostLocation);
+		}
+		else
+		{
+			startInfo.FileName = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\dotnet\dotnet.exe");
+			arguments.Add(serverHostLocation);
+		}
+
+		string serverPathPrefix = $"{typeof(RmiServerTests).FullName}.{nameof(this.CrossProcessServer)}.";
+		arguments.Add(typeof(Tester).Assembly.Location);
+		arguments.Add(typeof(Tester).FullName!);
+		arguments.Add(serverPathPrefix);
+		arguments.Add("20"); // MaxListeners
+		arguments.Add("4"); // MinListeners
+
+		// The current debugger can't be used. VS pops up a dialog to launch a new instance.
+		// Sometimes a lighter weight option is to use SysInternals PipeList utility from PowerShell
+		// to see what pipes are open: .\pipelist.exe |select-string Menees
+		bool debugServerHost = Debugger.IsAttached && Convert.ToBoolean(0);
+		arguments.Add(debugServerHost.ToString()); // LaunchDebugger
+
+		startInfo.CreateNoWindow = true;
+		startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+		startInfo.Arguments = string.Join(" ", arguments.Select(arg => $"\"{arg}\""));
+		startInfo.ErrorDialog = false;
+
+		using Process hostProcess = new();
+		hostProcess.StartInfo = startInfo;
+		hostProcess.Start().ShouldBeTrue();
+		try
+		{
+			Thread.Sleep(2000);
+			hostProcess.HasExited.ShouldBeFalse();
+
+			TimeSpan connectTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(2);
+			string hostServerPath = $"{serverPathPrefix}{nameof(IServerHost)}";
+			using RmiClient<IServerHost> hostClient = new(hostServerPath, connectTimeout: connectTimeout, loggerFactory: this.Loggers);
+			IServerHost serverHost = hostClient.CreateProxy();
+			serverHost.IsReady.ShouldBeTrue();
+
+			this.TestCombine(50, $"{serverPathPrefix}{nameof(ITester)}");
+
+			serverHost.Shutdown();
+		}
+		finally
+		{
+			TimeSpan exitWait = TimeSpan.FromSeconds(5);
+			if (hostProcess.WaitForExit((int)exitWait.TotalMilliseconds))
+			{
+				hostProcess.WaitForExit(); // Let console finish flushing.
+			}
+			else
+			{
+				hostProcess.Kill();
+				Assert.Fail($"Host process didn't exit within wait time of {exitWait}.");
+			}
+		}
 	}
 
 	#endregion
@@ -133,11 +195,11 @@ public class RmiServerTests : BaseTests
 
 	private sealed class InProcServerHost : IServerHost
 	{
-		public bool IsShutdown { get; private set; }
+		public bool IsReady { get; private set; } = true;
 
 		public void Shutdown()
 		{
-			this.IsShutdown = true;
+			this.IsReady = false;
 		}
 	}
 

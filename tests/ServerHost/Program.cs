@@ -1,10 +1,12 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics;
+using System.Reflection;
 using static System.Console;
 
 ExitCode exitCode = ExitCode.Default;
 
-const int RequiredArgCount = 5;
+const int RequiredArgCount = 6;
 
+// Debugger.Launch();
 if (args.Length != RequiredArgCount)
 {
 	exitCode = FataError(ExitCode.MissingArgs, $"Usage: {nameof(ServerHost)} AssemblyPath TypeName ServerPathPrefix Max Min");
@@ -19,14 +21,19 @@ else
 	{
 		int maxListeners = int.Parse(args[3]);
 		int minListeners = int.Parse(args[4]);
+		bool launchDebugger = bool.Parse(args[5]);
+		if (launchDebugger)
+		{
+			Debugger.Launch();
+		}
 
-		AssemblyName assemblyName = AssemblyName.GetAssemblyName(assemblyPath);
-		Assembly assembly = Assembly.Load(assemblyName);
+		// .NET Framework supports Load(AssemblyName), but .NET Core requires LoadFrom().
+		Assembly assembly = Assembly.LoadFrom(assemblyPath);
 		Type? serviceType = assembly.GetType(typeName);
 
 		if (serviceType == null)
 		{
-			exitCode = FataError(ExitCode.MissingType, $"Unable to load type {typeName} from assembly {assemblyName}.");
+			exitCode = FataError(ExitCode.MissingType, $"Unable to load type {typeName} from assembly {assemblyPath}.");
 		}
 		else
 		{
@@ -37,15 +44,17 @@ else
 			}
 			else
 			{
+				using LogManager logManager = new();
 				Type serverType = typeof(RmiServer<>).MakeGenericType(interfaceType);
 
-				string serverPath = serverPathPrefix + "`TargetType";
+				string targetServerPath = serverPathPrefix + interfaceType.Name;
 				object serviceInstance = Activator.CreateInstance(serviceType)!;
-				using IRmiServer server = (IRmiServer)Activator.CreateInstance(serverType, serverPathPrefix, serviceInstance, maxListeners, minListeners)!;
+				using IRmiServer server = (IRmiServer)Activator.CreateInstance(
+					serverType, targetServerPath, serviceInstance, maxListeners, minListeners, null, logManager.Loggers)!;
 
-				// TODO: Configure logging and pass a logger to server. [Bill, 1/31/2022]
+				string hostServerPath = serverPathPrefix + nameof(IServerHost);
 				ServerHostManager manager = new();
-				using RmiServer<IServerHost> managerServer = new(serverPathPrefix + "`Manager", manager, 1);
+				using RmiServer<IServerHost> managerServer = new(hostServerPath, manager, 1, loggerFactory: logManager.Loggers);
 
 				server.Start();
 				managerServer.Start();
