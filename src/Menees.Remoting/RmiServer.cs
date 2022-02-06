@@ -2,7 +2,6 @@
 
 #region Using Directives
 
-using System.IO.Pipes;
 using System.Reflection;
 using Menees.Remoting.Models;
 using Menees.Remoting.Pipes;
@@ -15,7 +14,7 @@ using Microsoft.Extensions.Logging;
 /// as a remotely invokable server.
 /// </summary>
 /// <typeparam name="TServiceInterface">The interface to make available for remote invocation.</typeparam>
-public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, IRmiServer
+public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, IRmiServer
 	where TServiceInterface : class
 {
 	#region Private Data Members
@@ -69,12 +68,11 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 			throw new ArgumentNullException(nameof(settings));
 		}
 
-		this.serviceInstance = serviceInstance;
+		this.serviceInstance = serviceInstance ?? throw new ArgumentNullException(nameof(serviceInstance));
 
 		// Note: The pipe is created with no listeners until we explicitly start them.
 		this.pipe = new(settings.ServerPath, settings.MinListeners, settings.MaxListeners, this.ProcessRequestAsync, this.Loggers);
 
-		// TODO: Use logger for default ReportUnhandledException behavior. [Bill, 1/29/2022]
 		// TODO: Add support for CancellationToken server-side. [Bill, 1/30/2022]
 	}
 
@@ -165,6 +163,7 @@ public sealed class RmiServer<TServiceInterface> : RmiBase<TServiceInterface>, I
 		}
 		catch (Exception ex)
 		{
+			this.Loggers.CreateLogger(this.GetType()).LogError(ex, "Exception while server was processing a request.");
 			this.ReportUnhandledException?.Invoke(ex);
 
 			try

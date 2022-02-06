@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 #endregion
 
-internal abstract class PipeBase : IDisposable
+internal abstract class PipeNode : IDisposable
 {
 	#region Private Data Members
 
@@ -18,7 +18,7 @@ internal abstract class PipeBase : IDisposable
 
 	#region Constructors
 
-	protected PipeBase(string pipeName, ILoggerFactory loggers)
+	protected PipeNode(string pipeName, ILoggerFactory loggers)
 	{
 		this.PipeName = pipeName;
 		this.Loggers = loggers;

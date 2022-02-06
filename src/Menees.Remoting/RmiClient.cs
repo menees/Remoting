@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 /// Used to invoke a <typeparamref name="TServiceInterface"/> interface member on a <see cref="RmiServer{T}"/>.
 /// </summary>
 /// <typeparam name="TServiceInterface">The interface to remotely invoke members on.</typeparam>
-public sealed class RmiClient<TServiceInterface> : RmiBase<TServiceInterface>
+public sealed class RmiClient<TServiceInterface> : RmiNode<TServiceInterface>
 	where TServiceInterface : class
 {
 	#region Private Data Members

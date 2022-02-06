@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 #endregion
 
-internal sealed class PipeServer : PipeBase
+internal sealed class PipeServer : PipeNode
 {
 	#region Private Data Members
 

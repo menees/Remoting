@@ -7,9 +7,9 @@ using Microsoft.Extensions.Logging;
 #endregion
 
 /// <summary>
-/// Settings used to initialize an <see cref="RmiBase{TServiceInterface}"/> instance.
+/// Settings used to initialize a client or server node.
 /// </summary>
-public abstract class BaseSettings
+public abstract class NodeSettings
 {
 	#region Constructors
 
@@ -17,7 +17,7 @@ public abstract class BaseSettings
 	/// Creates a new instance.
 	/// </summary>
 	/// <param name="serverPath">The path used to expose the service.</param>
-	protected BaseSettings(string serverPath)
+	protected NodeSettings(string serverPath)
 	{
 		this.ServerPath = serverPath;
 	}

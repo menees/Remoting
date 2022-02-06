@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 #endregion
 
-internal sealed class PipeClient : PipeBase
+internal sealed class PipeClient : PipeNode
 {
 	#region Constructors
 

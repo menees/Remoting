@@ -9,7 +9,7 @@ using System.IO.Pipes;
 /// <summary>
 /// Settings used to initialize an <see cref="RmiServer{TServiceInterface}"/> instance.
 /// </summary>
-public sealed class ServerSettings : BaseSettings
+public sealed class ServerSettings : NodeSettings
 {
 	#region Public Constants
 

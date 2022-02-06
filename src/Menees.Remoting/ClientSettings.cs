@@ -3,7 +3,7 @@
 /// <summary>
 /// Settings used to initialize an <see cref="RmiClient{TServiceInterface}"/> instance.
 /// </summary>
-public sealed class ClientSettings : BaseSettings
+public sealed class ClientSettings : NodeSettings
 {
 	#region Constructors
 
