@@ -16,14 +16,13 @@ internal sealed class UserSerializedValue
 		// This is required for JSON deserialization.
 	}
 
-	internal UserSerializedValue(Type dataType, object? value, ISerializer userSerializer)
+	internal UserSerializedValue(Type dataType, object? value, ISerializer? userSerializer)
 	{
-		// TODO: If userSerializer is null then just store value. [Bill, 2/5/2022]
 		this.DataType = dataType;
-		this.SerializerId = userSerializer.GetType().AssemblyQualifiedName;
+		this.SerializerId = GetId(userSerializer);
 		if (dataType != typeof(void))
 		{
-			this.SerializedValue = userSerializer.Serialize(value, dataType);
+			this.SerializedValue = userSerializer != null ? userSerializer.Serialize(value, dataType) : value;
 		}
 	}
 
@@ -33,8 +32,11 @@ internal sealed class UserSerializedValue
 
 	public Type DataType { get; set; } = typeof(object);
 
-	// TODO: Support object? instead of byte[]? for SerializedValue. [Bill, 2/5/2022]
-	public byte[]? SerializedValue { get; set; }
+	/// <summary>
+	/// If a custom user serializer was used, then this will be a byte[].
+	/// If no user serializer was used, then this will be an object serialized by the system serializer.
+	/// </summary>
+	public object? SerializedValue { get; set; }
 
 	public string? SerializerId { get; set; }
 
@@ -42,9 +44,8 @@ internal sealed class UserSerializedValue
 
 	#region Public Methods
 
-	public object? DeserializeValue(ISerializer userSerializer)
+	public object? DeserializeValue(ISerializer? userSerializer)
 	{
-		// TODO: If userSerializer is null then just return value. [Bill, 2/5/2022]
 		string? deserializerId = GetId(userSerializer);
 		if (deserializerId != this.SerializerId)
 		{
@@ -52,7 +53,16 @@ internal sealed class UserSerializedValue
 				$"Fully-qualified type names for serializer and deserializer do not match: S: {this.SerializerId} D:{deserializerId}");
 		}
 
-		object? result = this.SerializedValue != null ? userSerializer.Deserialize(this.SerializedValue, this.DataType) : null;
+		object? result;
+		if (userSerializer != null)
+		{
+			result = this.SerializedValue is byte[] data ? userSerializer.Deserialize(data, this.DataType) : null;
+		}
+		else
+		{
+			result = this.SerializedValue;
+		}
+
 		return result;
 	}
 
@@ -60,8 +70,8 @@ internal sealed class UserSerializedValue
 
 	#region Private Methods
 
-	private static string? GetId(ISerializer userSerializer)
-		=> userSerializer.GetType().AssemblyQualifiedName;
+	private static string? GetId(ISerializer? userSerializer)
+		=> userSerializer?.GetType().AssemblyQualifiedName;
 
 	#endregion
 }

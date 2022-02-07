@@ -116,6 +116,7 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>
 		// TODO: Finish ProcessRequestAsync. [Bill, 2/6/2022]
 		this.GetHashCode();
 		clientStream.GetHashCode();
+		this.requestHandler?.GetHashCode();
 		await Task.CompletedTask.ConfigureAwait(false);
 	}
 

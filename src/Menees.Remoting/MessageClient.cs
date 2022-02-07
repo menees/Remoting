@@ -84,7 +84,7 @@ public sealed class MessageClient<TIn, TOut> : MessageNode<TIn, TOut>
 		this.GetHashCode();
 		request?.GetHashCode();
 		await Task.CompletedTask.ConfigureAwait(false);
-		return default(TOut)!;
+		return default!;
 	}
 
 	#endregion

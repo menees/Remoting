@@ -83,8 +83,7 @@ public abstract class Node : IDisposable
 	private protected ISerializer SystemSerializer
 		=> this.systemSerializer ??= new JSerializer(new(this.tryGetType));
 
-	private protected ISerializer UserSerializer
-		=> this.userSerializer ?? this.SystemSerializer;
+	private protected ISerializer? UserSerializer => this.userSerializer;
 
 	private protected ILoggerFactory Loggers
 		=> this.loggerFactory ?? NullLoggerFactory.Instance;

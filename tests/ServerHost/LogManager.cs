@@ -153,10 +153,15 @@ public sealed class LogManager : IDisposable
 					Append(sb, exception, tag: "Exception: ");
 				}
 
-				foreach (object? value in this.callContextStack.Value!)
+				// This will be null if a logger user never calls BeginScope.
+				Stack<object?>? contextStack = this.callContextStack.Value;
+				if (contextStack != null)
 				{
-					sb.Append(' ');
-					Append(sb, value);
+					foreach (object? value in contextStack)
+					{
+						sb.Append(' ');
+						Append(sb, value);
+					}
 				}
 
 				string line = sb.ToString();

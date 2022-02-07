@@ -23,6 +23,9 @@ internal sealed class JSerializer : ISerializer
 
 			// Deserialize scalar Object values by inferring a preferred type instead of always returning JsonElement.
 			new ScalarObjectConverter(),
+
+			// Handle user vs. system serialized values.
+			new UserSerializedValueConverter(),
 		},
 
 		// Make sure ValueTuple serializes correctly since it uses public fields.
