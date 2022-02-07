@@ -78,14 +78,14 @@ public abstract class Node : IDisposable
 
 	#endregion
 
-	#region Protected Properties
+	#region Internal Properties
 
-	private protected ISerializer SystemSerializer
+	internal ISerializer SystemSerializer
 		=> this.systemSerializer ??= new JSerializer(new(this.tryGetType));
 
-	private protected ISerializer? UserSerializer => this.userSerializer;
+	internal ISerializer? UserSerializer => this.userSerializer;
 
-	private protected ILoggerFactory Loggers
+	internal ILoggerFactory Loggers
 		=> this.loggerFactory ?? NullLoggerFactory.Instance;
 
 	#endregion

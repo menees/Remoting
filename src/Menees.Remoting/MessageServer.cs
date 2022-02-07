@@ -2,6 +2,7 @@
 
 #region Using Directives
 
+using Menees.Remoting.Models;
 using Menees.Remoting.Pipes;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +14,7 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 /// <typeparam name="TIn">The request message type.</typeparam>
 /// <typeparam name="TOut">The response message type.</typeparam>
-public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>
+public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 {
 	#region Private Data Members
 
@@ -113,11 +114,34 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>
 
 	private async Task ProcessRequestAsync(Stream clientStream)
 	{
-		// TODO: Finish ProcessRequestAsync. [Bill, 2/6/2022]
-		this.GetHashCode();
-		clientStream.GetHashCode();
-		this.requestHandler?.GetHashCode();
-		await Task.CompletedTask.ConfigureAwait(false);
+		await ServerUtility.ProcessRequestAsync(this, this, clientStream, async request =>
+		{
+			Response response;
+			Func<TIn, Task<TOut>>? requestHandler = this.requestHandler;
+			if (request.MethodSignature != null)
+			{
+				response = ServerUtility.CreateResponse(new ArgumentException("A message request should not specify a method signature."));
+			}
+			else if (request.Arguments?.Count != 1)
+			{
+				response = ServerUtility.CreateResponse(new ArgumentException("A single input message is required."));
+			}
+			else if (request.Arguments[0] is not TIn inputMessage)
+			{
+				response = ServerUtility.CreateResponse(new ArgumentException($"The input message must be of type {typeof(TIn)}."));
+			}
+			else if (requestHandler == null)
+			{
+				response = ServerUtility.CreateResponse(new ObjectDisposedException(this.GetType().FullName));
+			}
+			else
+			{
+				TOut outputMessage = await requestHandler(inputMessage).ConfigureAwait(false);
+				response = new Response { Result = new UserSerializedValue(typeof(TOut), outputMessage, this.UserSerializer) };
+			}
+
+			return response;
+		}).ConfigureAwait(false);
 	}
 
 	#endregion

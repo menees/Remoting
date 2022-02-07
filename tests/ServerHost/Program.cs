@@ -55,7 +55,7 @@ else
 					LoggerFactory = logManager.Loggers,
 				};
 				object serviceInstance = Activator.CreateInstance(serviceType)!;
-				using IRmiServer server = (IRmiServer)Activator.CreateInstance(serverType, serviceInstance, targetServerSettings)!;
+				using IServer server = (IServer)Activator.CreateInstance(serverType, serviceInstance, targetServerSettings)!;
 
 				string hostServerPath = serverPathPrefix + nameof(IServerHost);
 				ServerHostManager manager = new();

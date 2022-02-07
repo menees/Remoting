@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 /// as a remotely invokable server.
 /// </summary>
 /// <typeparam name="TServiceInterface">The interface to make available for remote invocation.</typeparam>
-public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, IRmiServer
+public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, IServer
 	where TServiceInterface : class
 {
 	#region Private Data Members
@@ -113,28 +113,20 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 
 	#region Private Methods
 
-	private static Response CreateResponse(Exception ex)
-	{
-		Response response = new() { Error = new(ex) };
-		return response;
-	}
-
 	private async Task ProcessRequestAsync(Stream clientStream)
 	{
-		Response response;
-
-		try
+		await ServerUtility.ProcessRequestAsync(this, this, clientStream, async request =>
 		{
-			Request request = await Message.ReadFromAsync<Request>(clientStream, this.SystemSerializer).ConfigureAwait(false);
+			Response response;
 
 			if (!MethodSignatureCache.TryGetValue(request.MethodSignature ?? string.Empty, out MethodInfo? method))
 			{
-				response = CreateResponse(new TargetException(
+				response = ServerUtility.CreateResponse(new TargetException(
 					$"A {typeof(TServiceInterface).FullName} method with signature '{request.MethodSignature}' was not found."));
 			}
 			else if (this.serviceInstance is not object target)
 			{
-				response = CreateResponse(new ObjectDisposedException(this.GetType().FullName));
+				response = ServerUtility.CreateResponse(new ObjectDisposedException(this.GetType().FullName));
 			}
 			else
 			{
@@ -152,7 +144,7 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 				catch (TargetInvocationException ex)
 				{
 					// The inner exception is the original exception thrown by the invoked method.
-					response = CreateResponse(ex.InnerException ?? ex);
+					response = ServerUtility.CreateResponse(ex.InnerException ?? ex);
 					methodResult = null;
 				}
 
@@ -160,40 +152,9 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 				// invalid request arguments or from trying to serialize methodResult will pass through the
 				// ReportUnhandledException action below before being returned.
 			}
-		}
-		catch (Exception ex)
-		{
-			this.Loggers.CreateLogger(this.GetType()).LogError(ex, "Exception while server was processing a request.");
-			this.ReportUnhandledException?.Invoke(ex);
 
-			try
-			{
-				// Try to report the original exception.
-				response = CreateResponse(ex);
-			}
-			catch (Exception ex2)
-			{
-				// If we couldn't serialize the original exception, try to return a simple error with just the messages.
-				response = CreateResponse(new InvalidOperationException(string.Join(Environment.NewLine, ex.Message, ex2.Message)));
-			}
-		}
-
-		try
-		{
-			await response.WriteToAsync(clientStream, this.SystemSerializer).ConfigureAwait(false);
-		}
-		catch (ObjectDisposedException ex)
-		{
-			// We can get an ObjectDisposedException("Cannot access a closed pipe.")
-			// when WriteToAsync calls FlushAsync() on the stream if the client has already
-			// received all the data, processed it quickly, and closed the pipe. That's ok.
-			this.Loggers.CreateLogger(this.GetType()).LogDebug(ex, "Client closed pipe while server was finishing write.");
-		}
-		catch (Exception ex)
-		{
-			this.Loggers.CreateLogger(this.GetType()).LogError(ex, "Unhandled exception while server was finishing write.");
-			this.ReportUnhandledException?.Invoke(ex);
-		}
+			return await Task.FromResult(response).ConfigureAwait(false);
+		}).ConfigureAwait(false);
 	}
 
 	#endregion
