@@ -2,6 +2,7 @@
 
 #region Using Directives
 
+using Menees.Remoting.Models;
 using Menees.Remoting.Pipes;
 using Microsoft.Extensions.Logging;
 
@@ -73,18 +74,29 @@ public sealed class MessageClient<TIn, TOut> : MessageNode<TIn, TOut>
 	#region Public Methods
 
 	/// <summary>
-	/// Sends a <typeparamref name="TIn"/> <paramref name="request"/> to a <see cref="MessageServer{TIn, TOut}"/>
+	/// Sends a <typeparamref name="TIn"/> request to a <see cref="MessageServer{TIn, TOut}"/>
 	/// and returns the <typeparamref name="TOut"/> response.
 	/// </summary>
-	/// <param name="request">The request message to send.</param>
+	/// <param name="message">The request message to send.</param>
 	/// <returns>The response message recevied from the server.</returns>
-	public async Task<TOut> SendAsync(TIn request)
+	public async Task<TOut> SendAsync(TIn message)
 	{
-		// TODO: Task<TOut> SendAsync(TIn). [Bill, 2/5/2022]
-		this.GetHashCode();
-		request?.GetHashCode();
-		await Task.CompletedTask.ConfigureAwait(false);
-		return default!;
+		Request request = new()
+		{
+			Arguments = new() { new UserSerializedValue(typeof(TIn), message, this.UserSerializer) },
+		};
+
+		Response? response = null;
+		await this.pipe.SendRequestAsync(this.ConnectTimeout, async stream =>
+		{
+			await request.WriteToAsync(stream, this.SystemSerializer).ConfigureAwait(false);
+			response = await Message.ReadFromAsync<Response>(stream, this.SystemSerializer).ConfigureAwait(false);
+		}).ConfigureAwait(false);
+
+		response?.Error?.ThrowException();
+		object? rawResult = response?.Result?.DeserializeValue(this.UserSerializer);
+		TOut result = (TOut)rawResult!;
+		return result;
 	}
 
 	#endregion
