@@ -37,28 +37,28 @@ public class RmiServerTests : BaseTests
 	public void SingleServer()
 	{
 		// Run 20 clients that have to wait on a single server listener.
-		this.TestCombine(1, 1, 20);
+		this.TestClient(1, 1, 20);
 	}
 
 	[TestMethod]
 	public void MultiServerMedium()
 	{
 		// Run 100 clients that will have to wait on the 4-20 server listeners.
-		this.TestCombine(4, 20, 100);
+		this.TestClient(4, 20, 100);
 	}
 
 	[TestMethod]
 	public void MultiServerLarge()
 	{
 		// Run 5000 clients that will have to wait on the 20-100 server listeners.
-		this.TestCombine(20, 100, 5000);
+		this.TestClient(20, 100, 5000);
 	}
 
 	[TestMethod]
 	public void UnlimitedServerMedium()
 	{
 		// Run 500 clients that will have to wait on the available server listeners.
-		this.TestCombine(1, ServerSettings.MaxAllowedListeners, 500);
+		this.TestClient(1, ServerSettings.MaxAllowedListeners, 500);
 	}
 
 	[TestMethod]
@@ -126,7 +126,7 @@ public class RmiServerTests : BaseTests
 			IServerHost serverHost = hostClient.CreateProxy();
 			serverHost.IsReady.ShouldBeTrue();
 
-			this.TestCombine(50, $"{serverPathPrefix}{nameof(ITester)}");
+			this.TestClient(50, $"{serverPathPrefix}{nameof(ITester)}");
 
 			serverHost.Shutdown();
 		}
@@ -156,7 +156,7 @@ public class RmiServerTests : BaseTests
 
 	#region Private Methods
 
-	private void TestCombine(
+	private void TestClient(
 		int minServerListeners,
 		int maxServerListeners,
 		int clientCount,
@@ -169,10 +169,10 @@ public class RmiServerTests : BaseTests
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		server.Start();
 
-		this.TestCombine(clientCount, serverPath);
+		this.TestClient(clientCount, serverPath);
 	}
 
-	private void TestCombine(int clientCount, string serverPath)
+	private void TestClient(int clientCount, string serverPath)
 	{
 		TimeSpan timeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : ClientSettings.DefaultConnectTimeout;
 		Parallel.ForEach(
@@ -182,6 +182,7 @@ public class RmiServerTests : BaseTests
 			{
 				using RmiClient<ITester> client = new(serverPath, connectTimeout: timeout, loggerFactory: this.Loggers);
 				ITester proxy = client.CreateProxy();
+				RmiClientTests.TestProxy(proxy, item, isSingleClient: clientCount == 1);
 
 				const string Prefix = "Item";
 				string actual = proxy.Combine(Prefix, item.ToString());
