@@ -58,7 +58,36 @@ public class RmiClientTests : BaseTests
 		testerProxy.Combine("Proxy", " still ", "works.").ShouldBe("Proxy still works.");
 	}
 
-	// TODO: Add tests with custom serializer. [Bill, 2/5/2022]
+	[TestMethod]
+	public void CustomSerializerTest()
+	{
+		const string ServerPath = nameof(this.CustomSerializerTest);
+
+		ClientSettings clientSettings = new(ServerPath)
+		{
+			ConnectTimeout = TimeSpan.FromSeconds(2),
+			LoggerFactory = this.Loggers,
+			Serializer = new TestSerializer(),
+		};
+
+		using RmiClient<ITester> client = new(clientSettings);
+		ITester testerProxy = client.CreateProxy();
+		testerProxy.ShouldNotBeNull();
+
+		ServerSettings serverSettings = new(ServerPath)
+		{
+			LoggerFactory = this.Loggers,
+			Serializer = new TestSerializer(),
+		};
+		Tester tester = new();
+		using RmiServer<ITester> server = new(tester, serverSettings);
+		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
+		server.Start();
+
+		const int TestId = 456;
+		TestProxy(testerProxy, TestId, isSingleClient: true);
+	}
+
 	#endregion
 
 	#region Internal Methods
