@@ -13,7 +13,7 @@ public class RmiServerTests : BaseTests
 	#region Public Methods
 
 	[TestMethod]
-	public void CloneStringTest()
+	public void CloneString()
 	{
 		string serverPath = typeof(string).FullName!;
 		string expected = Guid.NewGuid().ToString();

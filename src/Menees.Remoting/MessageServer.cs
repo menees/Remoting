@@ -126,7 +126,7 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 			{
 				response = ServerUtility.CreateResponse(new ArgumentException("A single input message is required."));
 			}
-			else if (request.Arguments[0] is not TIn inputMessage)
+			else if (request.Arguments[0].DeserializeValue(this.UserSerializer) is not TIn inputMessage)
 			{
 				response = ServerUtility.CreateResponse(new ArgumentException($"The input message must be of type {typeof(TIn)}."));
 			}

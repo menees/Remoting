@@ -6,7 +6,7 @@ public class RmiClientTests : BaseTests
 	#region Public Methods
 
 	[TestMethod]
-	public void RmiClientTest()
+	public void Constructor()
 	{
 		using (RmiClient<IServerHost> client = new(this.GetType().FullName!, loggerFactory: this.Loggers))
 		{
@@ -20,9 +20,9 @@ public class RmiClientTests : BaseTests
 	}
 
 	[TestMethod]
-	public void CreateProxyTest()
+	public void CreateProxy()
 	{
-		const string ServerPath = nameof(this.CreateProxyTest);
+		const string ServerPath = nameof(this.CreateProxy);
 
 		using RmiClient<ITester> client = new(ServerPath, connectTimeout: TimeSpan.FromSeconds(2), loggerFactory: this.Loggers);
 		ITester testerProxy = client.CreateProxy();
@@ -59,9 +59,9 @@ public class RmiClientTests : BaseTests
 	}
 
 	[TestMethod]
-	public void CustomSerializerTest()
+	public void CustomSerializer()
 	{
-		const string ServerPath = nameof(this.CustomSerializerTest);
+		const string ServerPath = nameof(this.CustomSerializer);
 
 		ClientSettings clientSettings = new(ServerPath)
 		{
