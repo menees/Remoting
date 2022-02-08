@@ -79,7 +79,17 @@ public sealed class MessageClient<TIn, TOut> : MessageNode<TIn, TOut>
 	/// </summary>
 	/// <param name="message">The request message to send.</param>
 	/// <returns>The response message recevied from the server.</returns>
-	public async Task<TOut> SendAsync(TIn message)
+	public Task<TOut> SendAsync(TIn message)
+		=> this.SendAsync(message, CancellationToken.None);
+
+	/// <summary>
+	/// Sends a <typeparamref name="TIn"/> request to a <see cref="MessageServer{TIn, TOut}"/>
+	/// and returns the <typeparamref name="TOut"/> response.
+	/// </summary>
+	/// <param name="message">The request message to send.</param>
+	/// <param name="cancellationToken">A token used to signal a cancellation request.</param>
+	/// <returns>The response message recevied from the server.</returns>
+	public async Task<TOut> SendAsync(TIn message, CancellationToken cancellationToken)
 	{
 		Request request = new()
 		{
@@ -87,11 +97,14 @@ public sealed class MessageClient<TIn, TOut> : MessageNode<TIn, TOut>
 		};
 
 		Response? response = null;
-		await this.pipe.SendRequestAsync(this.ConnectTimeout, async stream =>
-		{
-			await request.WriteToAsync(stream, this.SystemSerializer).ConfigureAwait(false);
-			response = await Message.ReadFromAsync<Response>(stream, this.SystemSerializer).ConfigureAwait(false);
-		}).ConfigureAwait(false);
+		await this.pipe.SendRequestAsync(
+			this.ConnectTimeout,
+			async (stream, cancellation) =>
+			{
+				await request.WriteToAsync(stream, this.SystemSerializer, cancellation).ConfigureAwait(false);
+				response = await Message.ReadFromAsync<Response>(stream, this.SystemSerializer, cancellation).ConfigureAwait(false);
+			},
+			cancellationToken).ConfigureAwait(false);
 
 		response?.Error?.ThrowException();
 		object? rawResult = response?.Result?.DeserializeValue(this.UserSerializer);

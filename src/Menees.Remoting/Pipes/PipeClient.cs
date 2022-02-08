@@ -71,7 +71,10 @@ internal sealed class PipeClient : PipeNode
 		sendRequest(pipe);
 	}
 
-	internal async Task SendRequestAsync(TimeSpan connectTimeout, Func<Stream, Task> sendRequestAsync)
+	internal async Task SendRequestAsync(
+		TimeSpan connectTimeout,
+		Func<Stream, CancellationToken, Task> sendRequestAsync,
+		CancellationToken cancellationToken)
 	{
 		using NamedPipeClientStream pipe = this.CreatePipe(PipeOptions.Asynchronous);
 
@@ -85,7 +88,7 @@ internal sealed class PipeClient : PipeNode
 			{
 				int remainingTimeout = ConvertTimeout(remainingWaitTime);
 				int connectAttemptTimeout = remainingTimeout == Timeout.Infinite ? Timeout.Infinite : Math.Max(1, remainingTimeout);
-				await pipe.ConnectAsync(connectAttemptTimeout).ConfigureAwait(false);
+				await pipe.ConnectAsync(connectAttemptTimeout, cancellationToken).ConfigureAwait(false);
 				connected = true;
 				break;
 			}
@@ -103,7 +106,7 @@ internal sealed class PipeClient : PipeNode
 		while (!connected && remainingWaitTime > TimeSpan.Zero);
 
 		EnsureConnected(connected, pipe);
-		await sendRequestAsync(pipe).ConfigureAwait(false);
+		await sendRequestAsync(pipe, cancellationToken).ConfigureAwait(false);
 	}
 
 	#endregion

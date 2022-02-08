@@ -48,5 +48,10 @@ public sealed class ServerSettings : NodeSettings
 	/// </remarks>
 	public int MinListeners { get; set; } = 1;
 
+	/// <summary>
+	/// Gets or sets a token that signals a cancellation request.
+	/// </summary>
+	public CancellationToken CancellationToken { get; set; }
+
 	#endregion
 }

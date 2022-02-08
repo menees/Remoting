@@ -13,14 +13,19 @@ internal static class ServerUtility
 
 	public static Response CreateResponse(Exception ex) => new() { Error = new(ex) };
 
-	public static async Task ProcessRequestAsync(Node node, IServer server, Stream clientStream, Func<Request, Task<Response>> processRequestAsync)
+	public static async Task ProcessRequestAsync(
+		Node node,
+		IServer server,
+		Stream clientStream,
+		Func<Request, CancellationToken, Task<Response>> processRequestAsync,
+		CancellationToken cancellationToken)
 	{
 		Response response;
 
 		try
 		{
-			Request request = await Message.ReadFromAsync<Request>(clientStream, node.SystemSerializer).ConfigureAwait(false);
-			response = await processRequestAsync(request).ConfigureAwait(false);
+			Request request = await Message.ReadFromAsync<Request>(clientStream, node.SystemSerializer, cancellationToken).ConfigureAwait(false);
+			response = await processRequestAsync(request, cancellationToken).ConfigureAwait(false);
 		}
 		catch (Exception ex)
 		{
@@ -41,7 +46,7 @@ internal static class ServerUtility
 
 		try
 		{
-			await response.WriteToAsync(clientStream, node.SystemSerializer).ConfigureAwait(false);
+			await response.WriteToAsync(clientStream, node.SystemSerializer, cancellationToken).ConfigureAwait(false);
 		}
 		catch (ObjectDisposedException ex)
 		{

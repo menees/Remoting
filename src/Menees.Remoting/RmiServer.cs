@@ -23,6 +23,7 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 		typeof(TServiceInterface).GetMethods().ToDictionary(method => GetMethodSignature(method));
 
 	private readonly PipeServer pipe;
+	private readonly CancellationToken cancellationToken;
 
 	private TServiceInterface? serviceInstance;
 
@@ -72,8 +73,7 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 
 		// Note: The pipe is created with no listeners until we explicitly start them.
 		this.pipe = new(settings.ServerPath, settings.MinListeners, settings.MaxListeners, this.ProcessRequestAsync, this.Loggers);
-
-		// TODO: Add support for CancellationToken server-side. [Bill, 1/30/2022]
+		this.cancellationToken = settings.CancellationToken;
 	}
 
 	#endregion
@@ -115,46 +115,54 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 
 	private async Task ProcessRequestAsync(Stream clientStream)
 	{
-		await ServerUtility.ProcessRequestAsync(this, this, clientStream, async request =>
-		{
-			Response response;
+		await ServerUtility.ProcessRequestAsync(
+			this,
+			this,
+			clientStream,
+			async (request, cancellation) =>
+			{
+				Response response;
 
-			if (!MethodSignatureCache.TryGetValue(request.MethodSignature ?? string.Empty, out MethodInfo? method))
-			{
-				response = ServerUtility.CreateResponse(new TargetException(
-					$"A {typeof(TServiceInterface).FullName} method with signature '{request.MethodSignature}' was not found."));
-			}
-			else if (this.serviceInstance is not object target)
-			{
-				response = ServerUtility.CreateResponse(new ObjectDisposedException(this.GetType().FullName));
-			}
-			else
-			{
-				IEnumerable<UserSerializedValue> serializedArgs = request.Arguments ?? Enumerable.Empty<UserSerializedValue>();
-				object?[] args = serializedArgs.Select(arg => arg.DeserializeValue(this.UserSerializer)).ToArray();
-				object? methodResult;
-				try
+				if (!MethodSignatureCache.TryGetValue(request.MethodSignature ?? string.Empty, out MethodInfo? method))
 				{
-					methodResult = method.Invoke(target, args);
-					Type returnType = methodResult?.GetType() ?? method.ReturnType;
-
-					// TODO: If return type is Task then await methodResult. [Bill, 1/30/2022]
-					response = new Response { Result = new UserSerializedValue(returnType, methodResult, this.UserSerializer) };
+					response = ServerUtility.CreateResponse(new TargetException(
+						$"A {typeof(TServiceInterface).FullName} method with signature '{request.MethodSignature}' was not found."));
 				}
-				catch (TargetInvocationException ex)
+				else if (this.serviceInstance is not object target)
 				{
-					// The inner exception is the original exception thrown by the invoked method.
-					response = ServerUtility.CreateResponse(ex.InnerException ?? ex);
-					methodResult = null;
+					response = ServerUtility.CreateResponse(new ObjectDisposedException(this.GetType().FullName));
+				}
+				else
+				{
+					IEnumerable<UserSerializedValue> serializedArgs = request.Arguments ?? Enumerable.Empty<UserSerializedValue>();
+					object?[] args = serializedArgs.Select(arg => arg.DeserializeValue(this.UserSerializer)).ToArray();
+					object? methodResult;
+					try
+					{
+						methodResult = method.Invoke(target, args);
+						Type returnType = methodResult?.GetType() ?? method.ReturnType;
+
+						// In theory, if the return type is Task then we could await methodResult. However, that gets complicated
+						// very quickly since the client is synchronously waiting for the result. We can't serialize Task or CancellationToken
+						// directly, so we'd have to implement custom support for them in the client and server. For now, we'll keep things
+						// simple and let the serializer throw if those types are used. A caller can use MessageServer for async calls instead.
+						response = new Response { Result = new UserSerializedValue(returnType, methodResult, this.UserSerializer) };
+					}
+					catch (TargetInvocationException ex)
+					{
+						// The inner exception is the original exception thrown by the invoked method.
+						response = ServerUtility.CreateResponse(ex.InnerException ?? ex);
+						methodResult = null;
+					}
+
+					// The inner try..catch for Invoke only handles TargetInvocationException so any exceptions from
+					// invalid request arguments or from trying to serialize methodResult will pass through the
+					// ReportUnhandledException action below before being returned.
 				}
 
-				// The inner try..catch for Invoke only handles TargetInvocationException so any exceptions from
-				// invalid request arguments or from trying to serialize methodResult will pass through the
-				// ReportUnhandledException action below before being returned.
-			}
-
-			return await Task.FromResult(response).ConfigureAwait(false);
-		}).ConfigureAwait(false);
+				return await Task.FromResult(response).ConfigureAwait(false);
+			},
+			this.cancellationToken).ConfigureAwait(false);
 	}
 
 	#endregion
