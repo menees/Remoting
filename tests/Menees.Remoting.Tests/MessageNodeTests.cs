@@ -60,9 +60,40 @@ public class MessageNodeTests : BaseTests
 	}
 
 	[TestMethod]
-	public void ThrowException()
+	public async Task ThrowExceptionAsync()
 	{
-		// TODO: Finish ThrowException. [Bill, 2/7/2022]
+		const string ServerPath = nameof(this.ThrowExceptionAsync);
+
+		const string ExceptionMessage = "Only even numbers are supported.";
+		using MessageServer<int, string> server = new(
+			async value =>
+			{
+				if (value % 2 == 1)
+				{
+					throw new ArgumentException(ExceptionMessage);
+				}
+
+				return await Task.FromResult(value.ToString()).ConfigureAwait(false);
+			},
+			ServerPath,
+			loggerFactory: this.Loggers);
+		server.Start();
+
+		using MessageClient<int, string> client = new(ServerPath, loggerFactory: this.Loggers);
+		for (int i = 0; i < 2; i++)
+		{
+			try
+			{
+				string response = await client.SendAsync(i).ConfigureAwait(false);
+				i.ShouldBe(0);
+				response.ShouldBe(i.ToString());
+			}
+			catch (ArgumentException ex)
+			{
+				i.ShouldBe(1);
+				ex.Message.ShouldBe(ExceptionMessage);
+			}
+		}
 	}
 
 	#endregion
