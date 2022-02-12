@@ -89,34 +89,4 @@ public class RmiClientTests : BaseTests
 	}
 
 	#endregion
-
-	#region Internal Methods
-
-	internal static void TestProxy(ITester testerProxy, int testId, bool isSingleClient)
-	{
-		testerProxy.TestId = testId;
-		int actualTestId = testerProxy.TestId;
-
-		// With multiple simultaneous clients, we can't guarantee that the value returned from the property
-		// will be what we pushed in because another thread/client could have changed it.
-		if (isSingleClient)
-		{
-			actualTestId.ShouldBe(testId);
-		}
-
-		testerProxy.Combine("A", "B").ShouldBe("AB");
-		testerProxy.Combine("A", "B", "C").ShouldBe("ABC");
-
-		Widget paper = testerProxy.CreateWidget("Paper", 0.01m, 85, 110);
-		paper.Name.ShouldBe("Paper");
-		paper.Cost.ShouldBe(0.01m);
-		paper.Dimensions.ShouldBe(new[] { 85, 110 });
-
-		paper = testerProxy.UpdateWidget(paper, "Fancy Paper", 0.02m, null);
-		paper.Name.ShouldBe("Fancy Paper");
-		paper.Cost.ShouldBe(0.02m);
-		paper.Dimensions.ShouldBe(new[] { 85, 110 });
-	}
-
-	#endregion
 }

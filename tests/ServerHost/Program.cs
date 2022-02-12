@@ -47,21 +47,29 @@ else
 				using LogManager logManager = new();
 				Type serverType = typeof(RmiServer<>).MakeGenericType(interfaceType);
 
-				string targetServerPath = serverPathPrefix + interfaceType.Name;
-				ServerSettings targetServerSettings = new(targetServerPath)
+				ServerSettings rmiServerSettings = new(serverPathPrefix + interfaceType.Name)
 				{
 					MaxListeners = maxListeners,
 					MinListeners = minListeners,
 					LoggerFactory = logManager.Loggers,
 				};
 				object serviceInstance = Activator.CreateInstance(serviceType)!;
-				using IServer server = (IServer)Activator.CreateInstance(serverType, serviceInstance, targetServerSettings)!;
+				using IServer rmiServer = (IServer)Activator.CreateInstance(serverType, serviceInstance, rmiServerSettings)!;
+
+				ServerSettings messageServerSettings = new(serverPathPrefix + "Echo")
+				{
+					MaxListeners = maxListeners,
+					MinListeners = minListeners,
+					LoggerFactory = logManager.Loggers,
+				};
+				using MessageServer<string, string> echoMessageServer = new(input => Task.FromResult(input), messageServerSettings);
 
 				string hostServerPath = serverPathPrefix + nameof(IServerHost);
 				ServerHostManager manager = new();
 				using RmiServer<IServerHost> managerServer = new(manager, hostServerPath, 1, loggerFactory: logManager.Loggers);
 
-				server.Start();
+				rmiServer.Start();
+				echoMessageServer.Start();
 				managerServer.Start();
 				manager.WaitForShutdown();
 			}

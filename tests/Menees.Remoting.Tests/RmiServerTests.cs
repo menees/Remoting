@@ -78,79 +78,18 @@ public class RmiServerTests : BaseTests
 	}
 
 	[TestMethod]
-	public void CrossProcessServer()
+	public async Task CrossProcessServerAsync()
 	{
-		string serverHostLocation = typeof(IServerHost).Assembly.Location;
-
-		ProcessStartInfo startInfo = new();
-		List<string> arguments = new();
-		if (string.Equals(Path.GetExtension(serverHostLocation), ".exe", StringComparison.OrdinalIgnoreCase))
-		{
-			startInfo.FileName = Path.GetFileName(serverHostLocation);
-		}
-		else
-		{
-			startInfo.FileName = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\dotnet\dotnet.exe");
-			arguments.Add(serverHostLocation);
-		}
-
-		string serverPathPrefix = this.GenerateServerPath() + ".";
-		arguments.Add(typeof(Tester).Assembly.Location);
-		arguments.Add(typeof(Tester).FullName!);
-		arguments.Add(serverPathPrefix);
-		arguments.Add("20"); // MaxListeners
-		arguments.Add("4"); // MinListeners
-
-		// The current debugger can't be used. VS pops up a dialog to launch a new instance.
-		// Sometimes a lighter weight option is to use SysInternals PipeList utility from PowerShell
-		// to see what pipes are open: .\pipelist.exe |select-string Menees
-		bool debugServerHost = Debugger.IsAttached && Convert.ToBoolean(0);
-		arguments.Add(debugServerHost.ToString()); // LaunchDebugger
-
-		startInfo.CreateNoWindow = true;
-		startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-		startInfo.Arguments = string.Join(" ", arguments.Select(arg => $"\"{arg}\""));
-		startInfo.ErrorDialog = false;
-
-		using Process hostProcess = new();
-		hostProcess.StartInfo = startInfo;
-		hostProcess.Start().ShouldBeTrue();
-		try
-		{
-			Thread.Sleep(2000);
-			hostProcess.HasExited.ShouldBeFalse();
-
-			TimeSpan connectTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(2);
-			string hostServerPath = $"{serverPathPrefix}{nameof(IServerHost)}";
-			using RmiClient<IServerHost> hostClient = new(hostServerPath, connectTimeout: connectTimeout, loggerFactory: this.Loggers);
-			IServerHost serverHost = hostClient.CreateProxy();
-			serverHost.IsReady.ShouldBeTrue();
-
-			this.TestClient(50, $"{serverPathPrefix}{nameof(ITester)}");
-
-			serverHost.Shutdown();
-		}
-		finally
-		{
-			TimeSpan exitWait = TimeSpan.FromSeconds(5);
-			if (hostProcess.WaitForExit((int)exitWait.TotalMilliseconds))
+		await this.TestCrossProcessServerAsync(
+			this.GenerateServerPathPrefix(),
+			async prefix =>
 			{
-				hostProcess.WaitForExit(); // Let console finish flushing.
-			}
-			else
-			{
-				hostProcess.Kill();
-				Assert.Fail($"Host process didn't exit within wait time of {exitWait}.");
-			}
-		}
+				this.TestClient(50, $"{prefix}{nameof(ITester)}");
+				await Task.CompletedTask.ConfigureAwait(false);
+			},
+			20,
+			4).ConfigureAwait(false);
 	}
-
-	#endregion
-
-	#region Internal Methods
-
-	internal static void WriteUnhandledServerException(Exception ex)
-		=> Console.WriteLine("ERROR: Unhandled server exception: " + ex);
 
 	#endregion
 

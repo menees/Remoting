@@ -54,9 +54,20 @@ public class MessageNodeTests : BaseTests
 	}
 
 	[TestMethod]
-	public void CrossProcess()
+	public async Task CrossProcessAsync()
 	{
-		// TODO: Finish CrossProcess. [Bill, 2/7/2022]
+		await this.TestCrossProcessServerAsync(
+			this.GenerateServerPathPrefix(),
+			async prefix =>
+			{
+				using MessageClient<string, string> echoClient = new(prefix + "Echo", loggerFactory: this.Loggers);
+				for (int i = 1; i <= 5; i++)
+				{
+					string input = $"Test {i}";
+					(await echoClient.SendAsync(input).ConfigureAwait(false)).ShouldBe(input);
+				}
+			},
+			2).ConfigureAwait(false);
 	}
 
 	[TestMethod]
