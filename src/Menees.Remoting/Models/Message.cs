@@ -51,9 +51,19 @@ internal abstract class Message
 		byte[] messageLength = BitConverter.GetBytes(message.Length);
 		CheckEndianOrder(messageLength);
 
+		// In .NET Framework the stream.ReadAsync implementation ignores cancellationToken.
+		// This is a workaround. https://stackoverflow.com/a/12893018/1882616
+		using CancellationTokenRegistration registration = cancellationToken.Register(() => stream.Close());
+
+		// Check cancellation before and after each operation so we don't get an ObjectDisposedException
+		// trying to use the stream after we closed it due to the cancellation token registration.
+		cancellationToken.ThrowIfCancellationRequested();
 		await stream.WriteAsync(messageLength, 0, messageLength.Length, cancellationToken).ConfigureAwait(false);
+		cancellationToken.ThrowIfCancellationRequested();
 		await stream.WriteAsync(message, 0, message.Length, cancellationToken).ConfigureAwait(false);
+		cancellationToken.ThrowIfCancellationRequested();
 		await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+		cancellationToken.ThrowIfCancellationRequested();
 	}
 
 	#endregion
@@ -106,6 +116,20 @@ internal abstract class Message
 	{
 		byte[] result = new byte[requiredCount];
 
+		// In .NET Framework the stream.ReadAsync implementation ignores cancellationToken.
+		// This is a workaround. https://stackoverflow.com/a/12893018/1882616
+		using CancellationTokenRegistration registration = cancellationToken.Register(() => stream.Close());
+
+		// We'll check cancellation before and after each operation so we don't get an ObjectDisposedException
+		// trying to use the stream after we closed it due to the cancellation token registration.
+		void ThrowIfCancellationRequested()
+		{
+			if (cancellationToken.IsCancellationRequested)
+			{
+				throw new OperationCanceledException($"Stream read of {forWhat} was canceled.");
+			}
+		}
+
 		int totalCount = 0;
 		while (totalCount < requiredCount)
 		{
@@ -113,7 +137,10 @@ internal abstract class Message
 			// a writer pushes that into the stream). Theoretically, it could return less and then make
 			// more data available on the next call. So we'll loop until the stream runs out (i.e., is closed
 			// by the writer) or until we get what we want. https://stackoverflow.com/a/46797865/1882616
+			// https://github.com/dotnet/runtime/issues/16598 and https://github.com/dotnet/runtime/issues/58216
+			ThrowIfCancellationRequested();
 			int readCount = await stream.ReadAsync(result, totalCount, requiredCount - totalCount, cancellationToken).ConfigureAwait(false);
+			ThrowIfCancellationRequested();
 			if (readCount <= 0)
 			{
 				break;
@@ -124,6 +151,7 @@ internal abstract class Message
 
 		if (totalCount != requiredCount)
 		{
+			ThrowIfCancellationRequested();
 			throw new ArgumentException(
 				$"Unable to read {requiredCount} byte {forWhat} from stream. Only {totalCount} bytes were available.");
 		}

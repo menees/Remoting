@@ -22,14 +22,14 @@ public class RmiClientTests : BaseTests
 	[TestMethod]
 	public void CreateProxy()
 	{
-		const string ServerPath = nameof(this.CreateProxy);
+		string serverPath = this.GenerateServerPath();
 
-		using RmiClient<ITester> client = new(ServerPath, connectTimeout: TimeSpan.FromSeconds(2), loggerFactory: this.Loggers);
+		using RmiClient<ITester> client = new(serverPath, connectTimeout: TimeSpan.FromSeconds(2), loggerFactory: this.Loggers);
 		ITester testerProxy = client.CreateProxy();
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(tester, ServerPath, loggerFactory: this.Loggers);
+		using RmiServer<ITester> server = new(tester, serverPath, loggerFactory: this.Loggers);
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 
@@ -40,14 +40,14 @@ public class RmiClientTests : BaseTests
 	[TestMethod]
 	public void ThrowException()
 	{
-		const string ServerPath = nameof(this.ThrowException);
+		string serverPath = this.GenerateServerPath();
 
-		using RmiClient<ITester> client = new(ServerPath, loggerFactory: this.Loggers);
+		using RmiClient<ITester> client = new(serverPath, loggerFactory: this.Loggers);
 		ITester testerProxy = client.CreateProxy();
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(tester, ServerPath, loggerFactory: this.Loggers);
+		using RmiServer<ITester> server = new(tester, serverPath, loggerFactory: this.Loggers);
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 
@@ -61,9 +61,9 @@ public class RmiClientTests : BaseTests
 	[TestMethod]
 	public void CustomSerializer()
 	{
-		const string ServerPath = nameof(this.CustomSerializer);
+		string serverPath = this.GenerateServerPath();
 
-		ClientSettings clientSettings = new(ServerPath)
+		ClientSettings clientSettings = new(serverPath)
 		{
 			ConnectTimeout = TimeSpan.FromSeconds(2),
 			LoggerFactory = this.Loggers,
@@ -74,7 +74,7 @@ public class RmiClientTests : BaseTests
 		ITester testerProxy = client.CreateProxy();
 		testerProxy.ShouldNotBeNull();
 
-		ServerSettings serverSettings = new(ServerPath)
+		ServerSettings serverSettings = new(serverPath)
 		{
 			LoggerFactory = this.Loggers,
 			Serializer = new TestSerializer(),

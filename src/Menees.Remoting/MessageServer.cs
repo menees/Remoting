@@ -20,6 +20,7 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 
 	private readonly PipeServer pipe;
 	private readonly CancellationToken cancellationToken;
+	private readonly CancellationTokenSource? cancellationTokenSource;
 	private Func<TIn, CancellationToken, Task<TOut>>? requestHandler;
 
 	#endregion
@@ -113,7 +114,20 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 
 		// Note: The pipe is created with no listeners until we explicitly start them.
 		this.pipe = new(settings.ServerPath, settings.MinListeners, settings.MaxListeners, this.ProcessRequestAsync, this.Loggers);
-		this.cancellationToken = settings.CancellationToken;
+
+		if (settings.CancellationToken != CancellationToken.None)
+		{
+			this.cancellationToken = settings.CancellationToken;
+		}
+		else
+		{
+			// Make our own source so our Dispose method can signal cancellation during dispose.
+			// This is nice for notifying executing request handlers before we close the pipe out
+			// from under them. If the caller passed in a cancelable token, then we'll assume they're
+			// taking care of canceling before disposing the server instance.
+			this.cancellationTokenSource = new CancellationTokenSource();
+			this.cancellationToken = this.cancellationTokenSource.Token;
+		}
 	}
 
 	#endregion
@@ -145,6 +159,8 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 		if (disposing)
 		{
 			this.requestHandler = null;
+			this.cancellationTokenSource?.Cancel();
+			this.cancellationTokenSource?.Dispose();
 			this.pipe.Dispose();
 		}
 	}

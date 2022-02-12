@@ -2,6 +2,7 @@
 
 #region Using Directives
 
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -35,6 +36,21 @@ public class BaseTests
 	{
 		this.logManager?.Dispose();
 		this.logManager = null;
+	}
+
+	#endregion
+
+	#region Protected Methods
+
+	protected string GenerateServerPath([CallerMemberName] string? callerMemberName = null)
+	{
+		if (callerMemberName == null)
+		{
+			throw new ArgumentNullException(nameof(callerMemberName));
+		}
+
+		string result = $"{this.GetType().FullName}.{callerMemberName}";
+		return result;
 	}
 
 	#endregion

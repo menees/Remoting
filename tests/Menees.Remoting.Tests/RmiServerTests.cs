@@ -15,7 +15,7 @@ public class RmiServerTests : BaseTests
 	[TestMethod]
 	public void CloneString()
 	{
-		string serverPath = typeof(string).FullName!;
+		string serverPath = this.GenerateServerPath();
 		string expected = Guid.NewGuid().ToString();
 		using RmiServer<ICloneable> server = new(expected, serverPath, loggerFactory: this.Loggers);
 
@@ -64,7 +64,7 @@ public class RmiServerTests : BaseTests
 	[TestMethod]
 	public void InProcessServer()
 	{
-		const string serverPath = nameof(this.InProcessServer);
+		string serverPath = this.GenerateServerPath();
 		InProcServerHost host = new();
 		using RmiServer<IServerHost> server = new(host, serverPath, 2, 2, loggerFactory: this.Loggers);
 		server.ReportUnhandledException = WriteUnhandledServerException;
@@ -94,7 +94,7 @@ public class RmiServerTests : BaseTests
 			arguments.Add(serverHostLocation);
 		}
 
-		string serverPathPrefix = $"{typeof(RmiServerTests).FullName}.{nameof(this.CrossProcessServer)}.";
+		string serverPathPrefix = this.GenerateServerPath() + ".";
 		arguments.Add(typeof(Tester).Assembly.Location);
 		arguments.Add(typeof(Tester).FullName!);
 		arguments.Add(serverPathPrefix);
@@ -162,7 +162,7 @@ public class RmiServerTests : BaseTests
 		int clientCount,
 		[CallerMemberName] string? callerMemberName = null)
 	{
-		string serverPath = callerMemberName ?? throw new ArgumentNullException(nameof(callerMemberName));
+		string serverPath = this.GenerateServerPath(callerMemberName);
 
 		Tester tester = new();
 		using RmiServer<ITester> server = new(tester, serverPath, maxServerListeners, minServerListeners, loggerFactory: this.Loggers);
