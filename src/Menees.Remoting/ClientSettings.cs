@@ -1,5 +1,11 @@
 ﻿namespace Menees.Remoting;
 
+#region Using Directives
+
+using Menees.Remoting.Security;
+
+#endregion
+
 /// <summary>
 /// Settings used to initialize an <see cref="RmiClient{TServiceInterface}"/> instance.
 /// </summary>
@@ -37,6 +43,18 @@ public sealed class ClientSettings : NodeSettings
 	/// This defaults to <see cref="DefaultConnectTimeout"/>.
 	/// </remarks>
 	public TimeSpan ConnectTimeout { get; set; } = DefaultConnectTimeout;
+
+	/// <summary>
+	/// Gets or sets client security settings.
+	/// </summary>
+	public new ClientSecurity? Security { get; set; }
+
+	#endregion
+
+	#region Private Protected Methods
+
+	private protected override NodeSecurity? GetSecurity()
+		=> this.Security;
 
 	#endregion
 }

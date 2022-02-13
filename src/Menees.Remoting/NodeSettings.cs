@@ -2,6 +2,7 @@
 
 #region Using Directives
 
+using Menees.Remoting.Security;
 using Microsoft.Extensions.Logging;
 
 #endregion
@@ -46,6 +47,20 @@ public abstract class NodeSettings
 	/// Gets or sets an optional factory for creating type-specific server loggers for status information.
 	/// </summary>
 	public ILoggerFactory? LoggerFactory { get; set; }
+
+	/// <summary>
+	/// Gets security settings.
+	/// </summary>
+	public NodeSecurity? Security => this.GetSecurity();
+
+	#endregion
+
+	#region Private Protected Methods
+
+	// This is needed because C#9 covariant returns only work for read-only properties.
+	// We need NodeSettings.Security to be read-only, but we need Client|ServerSettings.Security
+	// to be read-write. So the derived type's Security property has to be "new" not an override.
+	private protected abstract NodeSecurity? GetSecurity();
 
 	#endregion
 }

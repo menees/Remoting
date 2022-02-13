@@ -3,6 +3,7 @@
 #region Using Directives
 
 using System.IO.Pipes;
+using Menees.Remoting.Security;
 
 #endregion
 
@@ -52,6 +53,18 @@ public sealed class ServerSettings : NodeSettings
 	/// Gets or sets a token that signals a cancellation request.
 	/// </summary>
 	public CancellationToken CancellationToken { get; set; }
+
+	/// <summary>
+	/// Gets or sets server security settings.
+	/// </summary>
+	public new ServerSecurity? Security { get; set; }
+
+	#endregion
+
+	#region Private Protected Methods
+
+	private protected override NodeSecurity? GetSecurity()
+		=> this.Security;
 
 	#endregion
 }
