@@ -113,7 +113,13 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 		this.requestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
 
 		// Note: The pipe is created with no listeners until we explicitly start them.
-		this.pipe = new(settings.ServerPath, settings.MinListeners, settings.MaxListeners, this.ProcessRequestAsync, this.Loggers);
+		this.pipe = new(
+			settings.ServerPath,
+			settings.MinListeners,
+			settings.MaxListeners,
+			this.ProcessRequestAsync,
+			this.Loggers,
+			(PipeServerSecurity?)settings.Security);
 
 		if (settings.CancellationToken != CancellationToken.None)
 		{

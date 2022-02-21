@@ -16,14 +16,17 @@ internal sealed class PipeClient : PipeNode
 	private const int ERROR_SEM_TIMEOUT = unchecked((int)0x80070079);
 #pragma warning restore SA1310 // Field names should not contain underscore
 
+	private readonly PipeClientSecurity? security;
+
 	#endregion
 
 	#region Constructors
 
-	internal PipeClient(string pipeName, string serverName, ILoggerFactory loggers)
+	internal PipeClient(string pipeName, string serverName, ILoggerFactory loggers, PipeClientSecurity? security)
 		: base(pipeName, loggers)
 	{
 		this.ServerName = serverName;
+		this.security = security;
 	}
 
 	#endregion
@@ -67,7 +70,7 @@ internal sealed class PipeClient : PipeNode
 		}
 		while (!connected && remainingWaitTime > TimeSpan.Zero);
 
-		EnsureConnected(connected, pipe);
+		this.EnsureConnected(connected, pipe);
 		sendRequest(pipe);
 	}
 
@@ -105,7 +108,7 @@ internal sealed class PipeClient : PipeNode
 		}
 		while (!connected && remainingWaitTime > TimeSpan.Zero);
 
-		EnsureConnected(connected, pipe);
+		this.EnsureConnected(connected, pipe);
 		await sendRequestAsync(pipe, cancellationToken).ConfigureAwait(false);
 	}
 
@@ -133,7 +136,7 @@ internal sealed class PipeClient : PipeNode
 		return new TimeoutException("Could not connect to the server due to a semaphore timeout.", ex);
 	}
 
-	private static void EnsureConnected(bool connected, NamedPipeClientStream pipe)
+	private void EnsureConnected(bool connected, NamedPipeClientStream pipe)
 	{
 		if (!connected)
 		{
@@ -141,16 +144,23 @@ internal sealed class PipeClient : PipeNode
 			throw new TimeoutException("Could not connect to the server within the specified timeout period.");
 		}
 
+		this.security?.CheckConnection(pipe);
 		pipe.ReadMode = Mode;
 	}
 
 	private NamedPipeClientStream CreatePipe(PipeOptions options)
 	{
+		if (this.security != null)
+		{
+			options |= this.security.Options;
+		}
+
 		// We only use a pipe for a single request. Remotely invoked interfaces shouldn't be chatty anyway.
 		// Single-use connections are easier to reason about and manage the state for. They also give us
 		// a lot of freedom to swap in other transports later (e.g., Http, ZeroMQ, TcpClient/TcpListener) if desired.
 		// HTTP 1.0 used non-persistent connections, and it was fine for non-chatty interfaces.
 		NamedPipeClientStream result = new(this.ServerName, this.PipeName, Direction, options);
+
 		return result;
 	}
 

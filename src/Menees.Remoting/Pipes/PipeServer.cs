@@ -14,12 +14,19 @@ internal sealed class PipeServer : PipeNode
 	private readonly HashSet<PipeServerListener> listeners = new();
 	private readonly int minListeners;
 	private readonly int maxListeners;
+	private readonly PipeServerSecurity? security;
 
 	#endregion
 
 	#region Constructors
 
-	internal PipeServer(string pipeName, int minListeners, int maxListeners, Func<Stream, Task> processRequestAsync, ILoggerFactory loggers)
+	internal PipeServer(
+		string pipeName,
+		int minListeners,
+		int maxListeners,
+		Func<Stream, Task> processRequestAsync,
+		ILoggerFactory loggers,
+		PipeServerSecurity? security)
 		: base(pipeName, loggers)
 	{
 		if (minListeners <= 0)
@@ -47,6 +54,7 @@ internal sealed class PipeServer : PipeNode
 		this.minListeners = minListeners;
 		this.maxListeners = maxListeners;
 		this.ProcessRequestAsync = processRequestAsync;
+		this.security = security;
 
 		// Note: We don't create any listeners here in the constructor because we want to finish construction first.
 		// If we created even one listener here, then it could start processing on a worker thread and immediately
@@ -103,7 +111,8 @@ internal sealed class PipeServer : PipeNode
 						try
 						{
 							// Pass the actual maxListeners value to the new pipe since it's externally visible using SysInternals' PipeList.
-							pipe = new(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous);
+							pipe = this.security?.CreatePipe(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous)
+								?? new(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous);
 						}
 						catch (IOException ex)
 						{

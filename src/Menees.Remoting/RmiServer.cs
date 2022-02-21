@@ -72,7 +72,13 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 		this.serviceInstance = serviceInstance ?? throw new ArgumentNullException(nameof(serviceInstance));
 
 		// Note: The pipe is created with no listeners until we explicitly start them.
-		this.pipe = new(settings.ServerPath, settings.MinListeners, settings.MaxListeners, this.ProcessRequestAsync, this.Loggers);
+		this.pipe = new(
+			settings.ServerPath,
+			settings.MinListeners,
+			settings.MaxListeners,
+			this.ProcessRequestAsync,
+			this.Loggers,
+			(PipeServerSecurity?)settings.Security);
 		this.cancellationToken = settings.CancellationToken;
 	}
 

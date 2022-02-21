@@ -57,7 +57,7 @@ public sealed class MessageClient<TIn, TOut> : MessageNode<TIn, TOut>
 		}
 
 		this.ConnectTimeout = settings.ConnectTimeout;
-		this.pipe = new(settings.ServerPath, settings.ServerHost, this.Loggers);
+		this.pipe = new(settings.ServerPath, settings.ServerHost, this.Loggers, (PipeClientSecurity?)settings.Security);
 	}
 
 	#endregion
