@@ -26,11 +26,9 @@ public sealed class PipeClientSecurity : ClientSecurity
 
 	#region Constructors
 
-	// TODO: Remove bool parameter. [Bill, 2/20/2022]
-	private PipeClientSecurity(bool isCurrentUserOnly)
+	private PipeClientSecurity()
 	{
-		this.IsCurrentUserOnly = isCurrentUserOnly;
-		this.Options = isCurrentUserOnly ? CurrentUserOnlyOption : PipeOptions.None;
+		this.Options = CurrentUserOnlyOption;
 	}
 
 	#endregion
@@ -43,13 +41,11 @@ public sealed class PipeClientSecurity : ClientSecurity
 	/// <remarks>
 	/// On Windows, it verifies both the user account and elevation level.
 	/// </remarks>
-	public static PipeClientSecurity CurrentUserOnly { get; } = new PipeClientSecurity(isCurrentUserOnly: true);
+	public static PipeClientSecurity CurrentUserOnly { get; } = new PipeClientSecurity();
 
 	#endregion
 
 	#region Internal Properties
-
-	internal bool IsCurrentUserOnly { get; }
 
 	internal PipeOptions Options { get; }
 
@@ -59,7 +55,8 @@ public sealed class PipeClientSecurity : ClientSecurity
 
 	internal void CheckConnection(NamedPipeClientStream pipe)
 	{
-		if (this.IsCurrentUserOnly)
+		// .NET 6.0 handles PipeOptions.CurrentUserOnly validation. We have to simulate it in .NET Framework.
+		if (pipe != null && this.Options == PipeOptions.None)
 		{
 #if NETFRAMEWORK
 			// This code is from .NET 6.0's ValidateRemotePipeUser for Windows.
@@ -73,9 +70,6 @@ public sealed class PipeClientSecurity : ClientSecurity
 				pipe.Close();
 				throw new UnauthorizedAccessException("Could not connect to the pipe because it was not owned by the current user.");
 			}
-#else
-			// .NET 6.0 already handles PipeOptions.CurrentUserOnly validation.
-			GC.KeepAlive(pipe);
 #endif
 		}
 	}

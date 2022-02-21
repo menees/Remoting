@@ -28,13 +28,18 @@ public sealed class PipeServerSecurity : ServerSecurity
 	public PipeServerSecurity(PipeSecurity security)
 	{
 		this.Security = security ?? throw new ArgumentNullException(nameof(security));
+#if NETCOREAPP
+		if (!OperatingSystem.IsWindows())
+		{
+			throw new InvalidOperationException("Custom PipeSecurity is not supported on this OS platform.");
+		}
+#endif
 	}
 
-	// TODO: Remove bool parameter. [Bill, 2/20/2022]
-	private PipeServerSecurity(bool isCurrentUserOnly)
+	private PipeServerSecurity()
 	{
-		this.IsCurrentUserOnly = isCurrentUserOnly;
-		this.Options = isCurrentUserOnly ? PipeClientSecurity.CurrentUserOnlyOption : PipeOptions.None;
+		this.IsCurrentUserOnly = true;
+		this.Options = PipeClientSecurity.CurrentUserOnlyOption;
 	}
 
 	#endregion
@@ -44,7 +49,7 @@ public sealed class PipeServerSecurity : ServerSecurity
 	/// <summary>
 	/// Gets an instance where the pipe can only be connected to a client created by the same user.
 	/// </summary>
-	public static PipeServerSecurity CurrentUserOnly { get; } = new PipeServerSecurity(isCurrentUserOnly: true);
+	public static PipeServerSecurity CurrentUserOnly { get; } = new PipeServerSecurity();
 
 	#endregion
 

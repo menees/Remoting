@@ -150,10 +150,8 @@ internal sealed class PipeClient : PipeNode
 
 	private NamedPipeClientStream CreatePipe(PipeOptions options)
 	{
-		if (this.security != null)
-		{
-			options |= this.security.Options;
-		}
+		// .NET 6 supports PipeOptions.CurrentUserOnly, but we have to simulate that in .NET Framework.
+		options |= this.security?.Options ?? PipeOptions.None;
 
 		// We only use a pipe for a single request. Remotely invoked interfaces shouldn't be chatty anyway.
 		// Single-use connections are easier to reason about and manage the state for. They also give us

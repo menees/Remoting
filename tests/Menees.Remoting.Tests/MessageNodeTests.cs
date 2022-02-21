@@ -155,20 +155,21 @@ public class MessageNodeTests : BaseTests
 		}
 	}
 
-#endregion
+	// TODO: Add message test with client and server security. [Bill, 2/20/2022]
+	#endregion
 
-#region Private Types
+	#region Private Types
 
 	private sealed class CodeName
 	{
-#region Public Properties
+		#region Public Properties
 
 		public int Code { get; set; }
 
 		public string Name { get; set; } = string.Empty;
 
-#endregion
+		#endregion
 	}
 
-#endregion
+	#endregion
 }

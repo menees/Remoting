@@ -91,6 +91,7 @@ public class RmiServerTests : BaseTests
 			4).ConfigureAwait(false);
 	}
 
+	// TODO: Add RMI test with client and server security. [Bill, 2/20/2022]
 	#endregion
 
 	#region Private Methods
