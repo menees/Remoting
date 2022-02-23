@@ -68,7 +68,7 @@ public abstract class Node : IDisposable
 		{
 			if (this.tryGetType != value)
 			{
-				this.tryGetType = value;
+				this.tryGetType = value ?? RequireGetType;
 
 				// On the next serialization, we need to create a new serializer instance using the new tryGetType lambda.
 				this.systemSerializer = null;

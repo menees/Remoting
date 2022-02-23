@@ -93,12 +93,22 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 		set => this.pipe.ReportUnhandledException = value;
 	}
 
+	/// <inheritdoc/>
+	public Action? Stopped
+	{
+		get => this.pipe.Stopped;
+		set => this.pipe.Stopped = value;
+	}
+
 	#endregion
 
 	#region Public Methods
 
 	/// <inheritdoc/>
 	public void Start() => this.pipe.EnsureMinListeners();
+
+	/// <inheritdoc/>
+	public void Stop() => this.pipe.StopListening();
 
 	#endregion
 

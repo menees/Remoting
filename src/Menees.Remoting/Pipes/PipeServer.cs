@@ -15,6 +15,7 @@ internal sealed class PipeServer : PipeNode
 	private readonly int minListeners;
 	private readonly int maxListeners;
 	private readonly PipeServerSecurity? security;
+	private bool stopping;
 
 	#endregion
 
@@ -70,6 +71,8 @@ internal sealed class PipeServer : PipeNode
 
 	public Action<Exception>? ReportUnhandledException { get; set; }
 
+	public Action? Stopped { get; set; }
+
 	#endregion
 
 	#region Internal Methods
@@ -93,52 +96,84 @@ internal sealed class PipeServer : PipeNode
 
 			this.Logger.LogTrace("Non-disposed listeners: {Count}", this.listeners.Count);
 
-			int availableListeners = (this.maxListeners == NamedPipeServerStream.MaxAllowedServerInstances
-				? int.MaxValue : this.maxListeners) - this.listeners.Count;
-
-			this.Logger.LogTrace("Available listeners: {Count}", availableListeners);
-			if (availableListeners > 0)
+			if (this.stopping && this.listeners.Count == 0)
 			{
-				int waitingCount = this.listeners.Count(listener => listener.State <= ListenerState.WaitingForConnection);
-				this.Logger.LogTrace("Waiting listeners: {Count}", waitingCount);
-				if (waitingCount < this.minListeners)
+				// This should only happen once since we'll only go from 1 to 0 once after this.stopping.
+				this.Stopped?.Invoke();
+			}
+			else
+			{
+				int availableListeners = (this.maxListeners == NamedPipeServerStream.MaxAllowedServerInstances
+					? int.MaxValue : this.maxListeners) - this.listeners.Count;
+
+				this.Logger.LogTrace("Available listeners: {Count}", availableListeners);
+				if (availableListeners > 0)
 				{
-					int createCount = Math.Min(this.minListeners - waitingCount, availableListeners);
-					this.Logger.LogTrace("Create listeners: {Count}", createCount);
-					for (int i = 0; i < createCount; i++)
+					int waitingCount = this.listeners.Count(listener => listener.State <= ListenerState.WaitingForConnection);
+					this.Logger.LogTrace("Waiting listeners: {Count}", waitingCount);
+					if (waitingCount < this.minListeners)
 					{
-						NamedPipeServerStream? pipe = null;
-						try
+						int createCount = Math.Min(this.minListeners - waitingCount, availableListeners);
+						this.Logger.LogTrace("Create listeners: {Count}", createCount);
+						for (int i = 0; i < createCount; i++)
 						{
-							// Pass the actual maxListeners value to the new pipe since it's externally visible using SysInternals' PipeList.
-							pipe = this.security?.CreatePipe(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous)
-								?? new(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous);
-						}
-						catch (IOException ex)
-						{
-							// We can get "All pipe instances are busy." if we reached the requested max limit or hit an OS limit.
-							this.Logger.LogDebug(ex, "Unable to create new named pipe server.");
-						}
+							NamedPipeServerStream? pipe = null;
+							try
+							{
+								// Pass the actual maxListeners value to the new pipe since it's externally visible using SysInternals' PipeList.
+								pipe = this.security?.CreatePipe(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous)
+									?? new(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous);
+							}
+							catch (IOException ex)
+							{
+								// We can get "All pipe instances are busy." if we reached the requested max limit or hit an OS limit.
+								this.Logger.LogDebug(ex, "Unable to create new named pipe server.");
+							}
 
-						if (pipe == null)
-						{
-							// "Merry Christmas. Shitter's full." https://www.youtube.com/watch?v=BeskbiJjCXI#t=21s
-							break;
-						}
+							if (pipe == null)
+							{
+								// "Merry Christmas. Shitter's full." https://www.youtube.com/watch?v=BeskbiJjCXI#t=21s
+								break;
+							}
 
-						PipeServerListener listener = new(this, pipe, this.Loggers.CreateLogger<PipeServerListener>());
-						this.listeners.Add(listener);
+							PipeServerListener listener = new(this, pipe, this.Loggers.CreateLogger<PipeServerListener>());
+							this.listeners.Add(listener);
 
-						// Note: We're intentionally not waiting on this to return. This is a true fire-and-forget case.
-						// When an I/O thread signals the listener that a client has connected, that listener will
-						// call back into us to start a new listener when available.
+							// Note: We're intentionally not waiting on this to return. This is a true fire-and-forget case.
+							// When an I/O thread signals the listener that a client has connected, that listener will
+							// call back into us to start a new listener when available.
 #pragma warning disable VSTHRD110 // Observe result of async calls. Intentionally fire-and-forget.
-						listener.StartAsync().ConfigureAwait(false);
+							listener.StartAsync().ConfigureAwait(false);
 #pragma warning restore VSTHRD110 // Observe result of async calls
+						}
 					}
 				}
 			}
 		}
+	}
+
+	internal void StopListening()
+	{
+		this.Logger.LogTrace("Stopping.");
+		lock (this.listeners)
+		{
+			this.stopping = true;
+
+			this.Logger.LogTrace("Initial listeners during stop: {Count}", this.listeners.Count);
+			foreach (PipeServerListener listener in this.listeners.ToList())
+			{
+				if (listener.State <= ListenerState.WaitingForConnection)
+				{
+					listener.Dispose();
+					this.listeners.Remove(listener);
+				}
+			}
+
+			this.Logger.LogTrace("Non-disposed listeners during stop: {Count}", this.listeners.Count);
+		}
+
+		// Call this now that this.stopping is set, so it can invoke this.Stopped if there are no more listeners.
+		this.EnsureMinListeners();
 	}
 
 	#endregion

@@ -18,6 +18,11 @@ public interface IServer : IDisposable
 	/// </summary>
 	Func<string, Type?> TryGetType { get; set; }
 
+	/// <summary>
+	/// Used to report when all listeners are closed after <see cref="Stop"/> is called.
+	/// </summary>
+	Action? Stopped { get; set; }
+
 	#endregion
 
 	#region Public Methods
@@ -26,6 +31,11 @@ public interface IServer : IDisposable
 	/// Starts listening for incoming requests.
 	/// </summary>
 	void Start();
+
+	/// <summary>
+	/// Stops listening for incoming requests.
+	/// </summary>
+	void Stop();
 
 	#endregion
 }

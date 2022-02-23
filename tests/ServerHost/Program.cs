@@ -67,16 +67,13 @@ else
 				string hostServerPath = serverPathPrefix + nameof(IServerHost);
 				ServerHostManager manager = new();
 				using RmiServer<IServerHost> managerServer = new(manager, hostServerPath, 1, loggerFactory: logManager.Loggers);
+				manager.Server = managerServer;
+				managerServer.Stopped += () => { manager.Shutdown(true); };
 
 				rmiServer.Start();
 				echoMessageServer.Start();
 				managerServer.Start();
 				manager.WaitForShutdown();
-
-				// Give the IServerHost.Shutdown() client a little time to receive our response and disconnect.
-				// Otherwise, this process could end too soon, and the client would get an ArgumentException
-				// like "Unable to read 4 byte message length from stream. Only 0 bytes were available.".
-				Thread.Sleep(TimeSpan.FromSeconds(1));
 			}
 		}
 	}
