@@ -1,67 +1,193 @@
-﻿namespace ServerHost;
+﻿namespace Menees.Remoting;
 
-// TODO: Move this to Remoting library? [Bill, 2/23/2022]
-// TODO: Rename to IServerManager with ServerManager implementation.  [Bill, 2/23/2022]
-internal sealed class ServerHostManager : IServerHost
+#region Using Directives
+
+using System.Runtime.CompilerServices;
+
+#endregion
+
+/// <summary>
+/// A basic host for <see cref="IServer"/> instances that can coordinate an <see cref="IServerHost.Exit"/> request.
+/// </summary>
+public sealed class ServerHost : IServerHost, IDisposable
 {
 	#region Private Data Members
 
 	private readonly ManualResetEventSlim resetEvent = new(false);
+	private readonly HashSet<IServer> servers = new();
+	private bool isDisposed;
+	private bool isExiting;
 
 	#endregion
 
 	#region Public Properties
 
-	public bool IsReady => !this.resetEvent.IsSet;
-
-	// TODO: Change this to AddServer and support a collection. [Bill, 2/23/2022]
-	public IServer? Server { get; set; }
+	bool IServerHost.IsReady => !this.resetEvent.IsSet;
 
 	#endregion
 
 	#region Public Methods
 
-	// Give the IServerHost.Shutdown() client a little time to receive our response and disconnect.
-	// Otherwise, this process could end too soon, and the client would get an ArgumentException
-	// like "Unable to read 4 byte message length from stream. Only 0 bytes were available.".
-	public void Shutdown() => this.BeginShutdown();
+	/// <inheritdoc/>
+	/// <exception cref="ObjectDisposedException">If <see cref="Dispose()"/> has been called already.</exception>
+	/// <exception cref="InvalidOperationException">If <see cref="IServerHost.Exit"/> has been called already.</exception>
+	void IServerHost.Exit(int? exitCode)
+	{
+		this.EnsureReady();
+		if (exitCode != null)
+		{
+			// TODO: Set instance property instead of a global. [Bill, 2/27/2022]
+			Environment.ExitCode = exitCode.Value;
+		}
 
-	public void WaitForShutdown() => this.resetEvent.Wait();
+		// Give the caller a little time to receive our response and disconnect.
+		// Otherwise, this process could end too soon, and the client would get an ArgumentException
+		// like "Unable to read 4 byte message length from stream. Only 0 bytes were available.".
+		this.StartExiting();
+	}
+
+	/// <inheritdoc/>
+	public void Dispose()
+	{
+		// Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+		this.Dispose(disposing: true);
+		GC.SuppressFinalize(this);
+	}
+
+	/// <summary>
+	/// Calls <see cref="IServer.Start"/> now and calls <see cref="IServer.Stop"/> in <see cref="IServerHost.Exit"/>.
+	/// </summary>
+	/// <param name="server">A server instance.</param>
+	/// <exception cref="ArgumentNullException"><paramref name="server"/> is null.</exception>
+	/// <exception cref="ObjectDisposedException">If <see cref="Dispose()"/> has been called already.</exception>
+	/// <exception cref="InvalidOperationException">If <see cref="IServerHost.Exit"/> has been called already.</exception>
+	public void Add(IServer server)
+	{
+		if (server == null)
+		{
+			throw new ArgumentNullException(nameof(server));
+		}
+
+		this.EnsureReady();
+
+		bool start = false;
+		lock (this.servers)
+		{
+			if (this.servers.Add(server))
+			{
+				start = true;
+			}
+		}
+
+		if (start)
+		{
+			server.Start();
+		}
+	}
+
+	/// <summary>
+	/// Waits for all added <see cref="IServer"/> instances to stop after <see cref="IServerHost.Exit"/> is called.
+	/// </summary>
+	public void WaitForExit() => this.resetEvent.Wait();
 
 	#endregion
 
 	#region Private Methods
 
-	private void BeginShutdown()
+	private void StartExiting()
 	{
-		if (this.Server != null)
+		if (!this.isExiting)
 		{
-			this.Server.Stopped += this.Server_Stopped;
+			this.isExiting = true;
 
-			// Tell the server to stop any waiting listeners and don't start new ones.
-			// When all the connected listeners finish, the Stopped action will be called
-			// to invoke EndShutdown to let the process finish.
-			this.Server.Stop();
-		}
-		else
-		{
-			this.EndShutdown();
+			List<IServer> stopServers;
+			lock (this.servers)
+			{
+				stopServers = new(this.servers.Count);
+				foreach (IServer server in this.servers)
+				{
+					server.Stopped += this.Server_Stopped;
+
+					// We must stop the servers outside the lock because their Stopped
+					// callback could immediately come back in on the same thread,
+					// which would try to remove the server from the collection we're
+					// iterating through.
+					stopServers.Add(server);
+				}
+			}
+
+			if (stopServers.Count == 0)
+			{
+				this.FinishExiting();
+			}
+			else
+			{
+				foreach (IServer server in stopServers)
+				{
+					// Tell the server to stop any waiting listeners and don't start new ones.
+					// When all the connected listeners finish, the Stopped event will be raised.
+					// That will invoke FinishExiting to let the process finish.
+					server.Stop();
+				}
+			}
 		}
 	}
 
-	private void EndShutdown()
-	{
-		if (this.Server != null)
-		{
-			this.Server.Stopped -= this.Server_Stopped;
-		}
+	private void FinishExiting()
+		=> this.resetEvent.Set();
 
-		this.resetEvent.Set();
-	}
-
-	// TODO: Only call EndShutdown when all servers have stopped. [Bill, 2/23/2022]
 	private void Server_Stopped(object? sender, EventArgs e)
-		=> this.EndShutdown();
+	{
+		if (sender is IServer server)
+		{
+			server.Stopped -= this.Server_Stopped;
+
+			bool isFinished = false;
+			lock (this.servers)
+			{
+				if (this.servers.Remove(server))
+				{
+					isFinished = this.servers.Count == 0;
+				}
+			}
+
+			if (isFinished)
+			{
+				this.FinishExiting();
+			}
+		}
+	}
+
+	private void Dispose(bool disposing)
+	{
+		if (!this.isDisposed)
+		{
+			if (disposing)
+			{
+				this.resetEvent.Dispose();
+			}
+
+			lock (this.servers)
+			{
+				this.servers.Clear();
+			}
+
+			this.isDisposed = true;
+		}
+	}
+
+	private void EnsureReady([CallerMemberName] string? callerMemberName = null)
+	{
+		if (this.isDisposed)
+		{
+			throw new ObjectDisposedException(nameof(ServerHost));
+		}
+
+		if (this.isExiting)
+		{
+			throw new InvalidOperationException($"{callerMemberName} can't be called after {nameof(IServerHost.Exit)}.");
+		}
+	}
 
 	#endregion
 }

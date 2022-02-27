@@ -6,6 +6,7 @@ ExitCode exitCode = ExitCode.Default;
 
 const int RequiredArgCount = 6;
 
+// TODO: Rename project to TestServerHost. [Bill, 2/27/2022]
 // Debugger.Launch();
 if (args.Length != RequiredArgCount)
 {
@@ -65,14 +66,15 @@ else
 				using MessageServer<string, string> echoMessageServer = new(input => Task.FromResult(input), messageServerSettings);
 
 				string hostServerPath = serverPathPrefix + nameof(IServerHost);
-				ServerHostManager manager = new();
-				using RmiServer<IServerHost> managerServer = new(manager, hostServerPath, 1, loggerFactory: logManager.Loggers);
-				manager.Server = managerServer;
+				using Menees.Remoting.ServerHost host = new();
+				using RmiServer<IServerHost> hostServer = new(host, hostServerPath, 1, loggerFactory: logManager.Loggers);
 
-				rmiServer.Start();
-				echoMessageServer.Start();
-				managerServer.Start();
-				manager.WaitForShutdown();
+				host.Add(rmiServer);
+				host.Add(echoMessageServer);
+				host.Add(hostServer);
+
+				host.WaitForExit();
+				exitCode = (ExitCode)Environment.ExitCode;
 			}
 		}
 	}

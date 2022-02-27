@@ -73,8 +73,10 @@ public class RmiServerTests : BaseTests
 		using RmiClient<IServerHost> client = new(serverPath, loggerFactory: this.Loggers);
 		IServerHost proxy = client.CreateProxy();
 		host.IsReady.ShouldBeTrue();
-		proxy.Shutdown();
+		host.ExitCode.ShouldBeNull();
+		proxy.Exit(0);
 		host.IsReady.ShouldBeFalse();
+		host.ExitCode.ShouldBe(0);
 	}
 
 	[TestMethod]
@@ -138,9 +140,12 @@ public class RmiServerTests : BaseTests
 	{
 		public bool IsReady { get; private set; } = true;
 
-		public void Shutdown()
+		public int? ExitCode { get; private set; }
+
+		public void Exit(int? exitCode)
 		{
 			this.IsReady = false;
+			this.ExitCode = exitCode;
 		}
 	}
 

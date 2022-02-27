@@ -63,18 +63,18 @@ public class BaseTests
 		int maxListeners,
 		int minListeners = 1)
 	{
-		string serverHostLocation = typeof(IServerHost).Assembly.Location;
+		string hostExeLocation = typeof(LogManager).Assembly.Location;
 
 		ProcessStartInfo startInfo = new();
 		List<string> arguments = new();
-		if (string.Equals(Path.GetExtension(serverHostLocation), ".exe", StringComparison.OrdinalIgnoreCase))
+		if (string.Equals(Path.GetExtension(hostExeLocation), ".exe", StringComparison.OrdinalIgnoreCase))
 		{
-			startInfo.FileName = Path.GetFileName(serverHostLocation);
+			startInfo.FileName = Path.GetFileName(hostExeLocation);
 		}
 		else
 		{
 			startInfo.FileName = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\dotnet\dotnet.exe");
-			arguments.Add(serverHostLocation);
+			arguments.Add(hostExeLocation);
 		}
 
 		arguments.Add(typeof(Tester).Assembly.Location);
@@ -94,6 +94,7 @@ public class BaseTests
 		startInfo.Arguments = string.Join(" ", arguments.Select(arg => $"\"{arg}\""));
 		startInfo.ErrorDialog = false;
 
+		const int ExpectedExitCode = 12345;
 		using Process hostProcess = new();
 		hostProcess.StartInfo = startInfo;
 		hostProcess.Start().ShouldBeTrue();
@@ -110,7 +111,7 @@ public class BaseTests
 
 			await testClientAsync(serverPathPrefix).ConfigureAwait(false);
 
-			serverHost.Shutdown();
+			serverHost.Exit(ExpectedExitCode);
 		}
 		finally
 		{
@@ -118,6 +119,7 @@ public class BaseTests
 			if (hostProcess.WaitForExit((int)exitWait.TotalMilliseconds))
 			{
 				hostProcess.WaitForExit(); // Let console finish flushing.
+				hostProcess.ExitCode.ShouldBe(ExpectedExitCode);
 			}
 			else
 			{
