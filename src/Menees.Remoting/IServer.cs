@@ -6,6 +6,15 @@
 /// </summary>
 public interface IServer : IDisposable
 {
+	#region Public Events
+
+	/// <summary>
+	/// Used to report when all listeners are closed after <see cref="Stop"/> is called.
+	/// </summary>
+	event EventHandler? Stopped;
+
+	#endregion
+
 	#region Public Properties
 
 	/// <summary>
@@ -17,11 +26,6 @@ public interface IServer : IDisposable
 	/// See <see cref="Node.TryGetType"/>.
 	/// </summary>
 	Func<string, Type?> TryGetType { get; set; }
-
-	/// <summary>
-	/// Used to report when all listeners are closed after <see cref="Stop"/> is called.
-	/// </summary>
-	Action? Stopped { get; set; }
 
 	#endregion
 

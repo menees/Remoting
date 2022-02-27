@@ -14,6 +14,7 @@ internal sealed class PipeServer : PipeNode
 	private readonly HashSet<PipeServerListener> listeners = new();
 	private readonly int minListeners;
 	private readonly int maxListeners;
+	private readonly IServer server;
 	private readonly PipeServerSecurity? security;
 	private bool stopping;
 
@@ -26,6 +27,7 @@ internal sealed class PipeServer : PipeNode
 		int minListeners,
 		int maxListeners,
 		Func<Stream, Task> processRequestAsync,
+		IServer server,
 		ILoggerFactory loggers,
 		PipeServerSecurity? security)
 		: base(pipeName, loggers)
@@ -55,6 +57,7 @@ internal sealed class PipeServer : PipeNode
 		this.minListeners = minListeners;
 		this.maxListeners = maxListeners;
 		this.ProcessRequestAsync = processRequestAsync;
+		this.server = server;
 		this.security = security;
 
 		// Note: We don't create any listeners here in the constructor because we want to finish construction first.
@@ -65,13 +68,18 @@ internal sealed class PipeServer : PipeNode
 
 	#endregion
 
+	#region Public Events
+
+	/// <inheritdoc/>
+	public event EventHandler? Stopped;
+
+	#endregion
+
 	#region Public Properties
 
 	public Func<Stream, Task> ProcessRequestAsync { get; }
 
 	public Action<Exception>? ReportUnhandledException { get; set; }
-
-	public Action? Stopped { get; set; }
 
 	#endregion
 
@@ -99,7 +107,7 @@ internal sealed class PipeServer : PipeNode
 			if (this.stopping && this.listeners.Count == 0)
 			{
 				// This should only happen once since we'll only go from 1 to 0 once after this.stopping.
-				this.Stopped?.Invoke();
+				this.Stopped?.Invoke(this.server, EventArgs.Empty);
 			}
 			else
 			{

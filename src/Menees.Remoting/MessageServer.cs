@@ -118,6 +118,7 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 			settings.MinListeners,
 			settings.MaxListeners,
 			this.ProcessRequestAsync,
+			this,
 			this.Loggers,
 			(PipeServerSecurity?)settings.Security);
 
@@ -138,6 +139,17 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 
 	#endregion
 
+	#region Public Events
+
+	/// <inheritdoc/>
+	public event EventHandler? Stopped
+	{
+		add => this.pipe.Stopped += value;
+		remove => this.pipe.Stopped -= value;
+	}
+
+	#endregion
+
 	#region Public Properties
 
 	/// <inheritdoc/>
@@ -145,13 +157,6 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 	{
 		get => this.pipe.ReportUnhandledException;
 		set => this.pipe.ReportUnhandledException = value;
-	}
-
-	/// <inheritdoc/>
-	public Action? Stopped
-	{
-		get => this.pipe.Stopped;
-		set => this.pipe.Stopped = value;
 	}
 
 	#endregion

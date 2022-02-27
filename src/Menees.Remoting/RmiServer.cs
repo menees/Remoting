@@ -77,9 +77,21 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 			settings.MinListeners,
 			settings.MaxListeners,
 			this.ProcessRequestAsync,
+			this,
 			this.Loggers,
 			(PipeServerSecurity?)settings.Security);
 		this.cancellationToken = settings.CancellationToken;
+	}
+
+	#endregion
+
+	#region Public Events
+
+	/// <inheritdoc/>
+	public event EventHandler? Stopped
+	{
+		add => this.pipe.Stopped += value;
+		remove => this.pipe.Stopped -= value;
 	}
 
 	#endregion
@@ -91,13 +103,6 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 	{
 		get => this.pipe.ReportUnhandledException;
 		set => this.pipe.ReportUnhandledException = value;
-	}
-
-	/// <inheritdoc/>
-	public Action? Stopped
-	{
-		get => this.pipe.Stopped;
-		set => this.pipe.Stopped = value;
 	}
 
 	#endregion

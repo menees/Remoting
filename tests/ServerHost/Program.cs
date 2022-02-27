@@ -68,7 +68,6 @@ else
 				ServerHostManager manager = new();
 				using RmiServer<IServerHost> managerServer = new(manager, hostServerPath, 1, loggerFactory: logManager.Loggers);
 				manager.Server = managerServer;
-				managerServer.Stopped += () => { manager.Shutdown(true); };
 
 				rmiServer.Start();
 				echoMessageServer.Start();
