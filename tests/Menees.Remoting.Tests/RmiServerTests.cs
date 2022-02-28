@@ -65,18 +65,25 @@ public class RmiServerTests : BaseTests
 	public void InProcessServer()
 	{
 		string serverPath = this.GenerateServerPath();
-		InProcServerHost host = new();
+		using ServerHost host = new();
 		using RmiServer<IServerHost> server = new(host, serverPath, 2, 2, loggerFactory: this.Loggers);
 		server.ReportUnhandledException = WriteUnhandledServerException;
-		server.Start();
+		host.Add(server);
 
-		using RmiClient<IServerHost> client = new(serverPath, loggerFactory: this.Loggers);
+		using RmiClient<IServerHost> client = new(serverPath, connectTimeout: TimeSpan.FromSeconds(2), loggerFactory: this.Loggers);
 		IServerHost proxy = client.CreateProxy();
-		host.IsReady.ShouldBeTrue();
+		IServerHost direct = host;
+		proxy.IsReady.ShouldBeTrue();
+		direct.IsReady.ShouldBeTrue();
 		host.ExitCode.ShouldBeNull();
 		proxy.Exit(0);
-		host.IsReady.ShouldBeFalse();
 		host.ExitCode.ShouldBe(0);
+		host.WaitForExit();
+
+		direct.IsReady.ShouldBeFalse();
+
+		// The proxy interface isn't usable now since we told the host to Exit.
+		Should.Throw<TimeoutException>(() => proxy.IsReady.ShouldBeFalse());
 	}
 
 	[TestMethod]
@@ -130,23 +137,6 @@ public class RmiServerTests : BaseTests
 				string actual = proxy.Combine(Prefix, item.ToString());
 				actual.ShouldBe(Prefix + item);
 			});
-	}
-
-	#endregion
-
-	#region Private Types
-
-	private sealed class InProcServerHost : IServerHost
-	{
-		public bool IsReady { get; private set; } = true;
-
-		public int? ExitCode { get; private set; }
-
-		public void Exit(int? exitCode)
-		{
-			this.IsReady = false;
-			this.ExitCode = exitCode;
-		}
 	}
 
 	#endregion

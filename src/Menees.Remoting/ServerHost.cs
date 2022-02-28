@@ -24,6 +24,11 @@ public sealed class ServerHost : IServerHost, IDisposable
 
 	bool IServerHost.IsReady => !this.resetEvent.IsSet;
 
+	/// <summary>
+	/// Gets the exit code passed to <see cref="IServerHost.Exit"/>.
+	/// </summary>
+	public int? ExitCode { get; private set; }
+
 	#endregion
 
 	#region Public Methods
@@ -34,11 +39,7 @@ public sealed class ServerHost : IServerHost, IDisposable
 	void IServerHost.Exit(int? exitCode)
 	{
 		this.EnsureReady();
-		if (exitCode != null)
-		{
-			// TODO: Set instance property instead of a global. [Bill, 2/27/2022]
-			Environment.ExitCode = exitCode.Value;
-		}
+		this.ExitCode = exitCode;
 
 		// Give the caller a little time to receive our response and disconnect.
 		// Otherwise, this process could end too soon, and the client would get an ArgumentException

@@ -74,7 +74,7 @@ else
 				host.Add(hostServer);
 
 				host.WaitForExit();
-				exitCode = (ExitCode)Environment.ExitCode;
+				exitCode = (ExitCode)(host.ExitCode ?? 0);
 			}
 		}
 	}

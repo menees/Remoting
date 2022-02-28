@@ -104,10 +104,13 @@ internal sealed class PipeServer : PipeNode
 
 			this.Logger.LogTrace("Non-disposed listeners: {Count}", this.listeners.Count);
 
-			if (this.stopping && this.listeners.Count == 0)
+			if (this.stopping)
 			{
-				// This should only happen once since we'll only go from 1 to 0 once after this.stopping.
-				this.Stopped?.Invoke(this.server, EventArgs.Empty);
+				if (this.listeners.Count == 0)
+				{
+					// This should only happen once since we'll only go from 1 to 0 once after this.stopping.
+					this.Stopped?.Invoke(this.server, EventArgs.Empty);
+				}
 			}
 			else
 			{
