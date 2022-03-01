@@ -6,12 +6,12 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\Menees.Remoting\Menees.Remoting.csproj" />
-		<ProjectReference Include="..\ServerHost\ServerHost.csproj" />
+		<ProjectReference Include="..\Menees.Remoting.TestHost\Menees.Remoting.TestHost.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<Using Include="Menees.Remoting.TestHost" />
 		<Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
-		<Using Include="ServerHost" />
 		<Using Include="Shouldly" />
 	</ItemGroup>
 </Project>

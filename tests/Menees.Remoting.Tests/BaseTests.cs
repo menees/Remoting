@@ -63,7 +63,7 @@ public class BaseTests
 		int maxListeners,
 		int minListeners = 1)
 	{
-		string hostExeLocation = typeof(LogManager).Assembly.Location;
+		string hostExeLocation = typeof(Program).Assembly.Location;
 
 		ProcessStartInfo startInfo = new();
 		List<string> arguments = new();
