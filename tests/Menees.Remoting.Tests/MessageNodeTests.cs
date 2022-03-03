@@ -2,6 +2,9 @@
 
 #region Using Directives
 
+using System.IO.Pipes;
+using System.Runtime.InteropServices;
+using Menees.Remoting.Pipes;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Shouldly;
 
@@ -155,7 +158,56 @@ public class MessageNodeTests : BaseTests
 		}
 	}
 
-	// TODO: Add message test with client and server security. [Bill, 2/20/2022]
+	[TestMethod]
+	public async Task SecurityVariationsAsync()
+	{
+		await TestAsync(1, PipeClientSecurity.CurrentUserOnly, null).ConfigureAwait(false);
+		await TestAsync(2, null, PipeServerSecurity.CurrentUserOnly).ConfigureAwait(false);
+		await TestAsync(3, PipeClientSecurity.CurrentUserOnly, PipeServerSecurity.CurrentUserOnly).ConfigureAwait(false);
+
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+		{
+			try
+			{
+				// This empty PipeSecurity instance doesn't grant any user access to the pipe (even the current user).
+				PipeSecurity pipeSecurity = new();
+				await TestAsync(4, PipeClientSecurity.CurrentUserOnly, new PipeServerSecurity(pipeSecurity)).ConfigureAwait(false);
+				Assert.Fail("Client should not have access to connect to server.");
+			}
+			catch (UnauthorizedAccessException ex)
+			{
+				Assert.IsTrue(ex != null);
+			}
+		}
+
+		async Task TestAsync(int code, PipeClientSecurity? clientSecurity, PipeServerSecurity? serverSecurity)
+		{
+			string serverPath = this.GenerateServerPath() + $".{code}";
+
+			ServerSettings serverSettings = new(serverPath)
+			{
+				LoggerFactory = this.Loggers,
+				Security = serverSecurity,
+			};
+			using MessageServer<CodeName, string> server = new(
+				async codeName => await Task.FromResult($"{codeName.Code}: {codeName.Name}").ConfigureAwait(false),
+				serverSettings);
+			server.Start();
+
+			ClientSettings clientSettings = new(serverPath)
+			{
+				LoggerFactory = this.Loggers,
+				Security = clientSecurity,
+			};
+			using MessageClient<CodeName, string> client = new(clientSettings);
+
+			string response = await client.SendAsync(new CodeName { Code = code, Name = "First" }).ConfigureAwait(false);
+			response.ShouldBe($"{code}: First");
+			response = await client.SendAsync(new CodeName { Code = 2 * code, Name = "Second" }).ConfigureAwait(false);
+			response.ShouldBe($"{2 * code}: Second");
+		}
+	}
+
 	#endregion
 
 	#region Private Types
