@@ -10,7 +10,9 @@
 		<GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
 		<SignAssembly>true</SignAssembly>
 		<LangVersion>latest</LangVersion>
-		<Copyright>Copyright © 2022-$([System.DateTime]::UtcNow.ToString(`yyyy`)) Bill Menees</Copyright>
+		<CurrentYear>$([System.DateTime]::UtcNow.ToString(`yyyy`))</CurrentYear>
+		<Copyright>Copyright © 2022-$(CurrentYear) Bill Menees</Copyright>
+		<Copyright Condition="$(CurrentYear) == '2022'">Copyright © 2022 Bill Menees</Copyright>
 
 		<!-- Note: We can't target .NET Standard 2.0 because DispatchProxy.Create isn't supported there (due to lack of Reflection.Emit). -->
 		<!-- https://docs.microsoft.com/en-us/dotnet/standard/frameworks -->
@@ -26,7 +28,8 @@
 		<ProduceReferenceAssembly>false</ProduceReferenceAssembly>
 
 		<!-- Make the assembly, file, and NuGet package versions the same. -->
-		<Version>0.1.0</Version>
+		<!-- https://docs.microsoft.com/en-us/nuget/concepts/package-versioning#pre-release-versions -->
+		<Version>0.2.0-alpha</Version>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
