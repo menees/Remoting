@@ -1,12 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
+		<Description>Simple RMI and IPC library for modern .NET</Description>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageTags>ipc; inter-process-communication; rmi; remote-method-invocation; rpc; remote-procedure-call;</PackageTags>
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="System.Text.Json" Version="6.0.2" />
+	  <None Include="..\..\README.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Text.Json" Version="6.0.2" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
 	</ItemGroup>
 
