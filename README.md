@@ -20,7 +20,45 @@ The server process exposes a .NET interface for a given instance object. Then on
 .NET's [DispatchProxy.Create](https://docs.microsoft.com/en-us/dotnet/api/system.reflection.dispatchproxy.create) is used to generate the interface proxy, so clients can invoke 
 the interface methods as normal C# calls.
 
-For some usage examples see:
+``` C#
+[TestMethod]
+public void HasherExample()
+{
+    const string ServerPath = "Menees.Remoting.RmiClientTests.HasherExample";
+
+    using RmiServer<IHasher> server = new(new Hasher(), ServerPath);
+    server.Start();
+
+    using RmiClient<IHasher> client = new(ServerPath);
+    IHasher proxy = client.CreateProxy();
+
+    proxy.Hash(new byte[] { 1, 2, 3, 4 }).Length.ShouldBe(20);
+    proxy.Hash("Testing").ShouldBe("0820b32b206b7352858e8903a838ed14319acdfd");
+}
+
+internal interface IHasher
+{
+    byte[] Hash(byte[] data);
+    string Hash(string text);
+}
+
+internal class Hasher : IHasher
+{
+    public byte[] Hash(byte[] data)
+    {
+        using HashAlgorithm hasher = SHA1.Create();
+        return hasher.ComputeHash(data);
+    }
+
+    public string Hash(string text)
+    {
+        byte[] hash = this.Hash(Encoding.UTF8.GetBytes(text));
+        return string.Concat(hash.Select(b => $"{b:x2}"));
+    }
+}
+```
+
+For more usage examples see:
 * [RmiClientTests](tests/Menees.Remoting.Tests/RmiClientTests.cs)
 * [RmiServerTests](tests/Menees.Remoting.Tests/RmiServerTests.cs)
 
@@ -36,7 +74,22 @@ Menees.Remoting provides [MessageClient](src/Menees.Remoting/MessageClient.cs) t
 a [MessageServer](src/Menees.Remoting/MessageServer.cs) and receive a `TOut`-typed response message. Message IPC only
 supports asynchronous calls, and the server requires a lambda that takes a `TIn` and returns a `Task<TOut>`.
 
-For some usage examples see:
+``` C#
+[TestMethod]
+public async Task Base64ExampleAsync()
+{
+    const string ServerPath = "Menees.Remoting.MessageNodeTests.Base64ExampleAsync";
+
+    using MessageServer<byte[], string> server = new(data => Task.FromResult(Convert.ToBase64String(data)), ServerPath);
+    server.Start();
+
+    using MessageClient<byte[], string> client = new(ServerPath);
+    string response = await client.SendAsync(new byte[] { 1, 2, 3, 4 }).ConfigureAwait(false);
+    response.ShouldBe("AQIDBA==");
+}
+```
+
+For more usage examples see:
 * [MessageNodeTests](tests/Menees.Remoting.Tests/MessageNodeTests.cs)
 
 ## No .NET Standard 2.0 Support

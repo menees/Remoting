@@ -16,6 +16,19 @@ public class MessageNodeTests : BaseTests
 	#region Public Methods
 
 	[TestMethod]
+	public async Task Base64ExampleAsync()
+	{
+		const string ServerPath = "Menees.Remoting.MessageNodeTests.Base64ExampleAsync";
+
+		using MessageServer<byte[], string> server = new(data => Task.FromResult(Convert.ToBase64String(data)), ServerPath);
+		server.Start();
+
+		using MessageClient<byte[], string> client = new(ServerPath);
+		string response = await client.SendAsync(new byte[] { 1, 2, 3, 4 }).ConfigureAwait(false);
+		response.ShouldBe("AQIDBA==");
+	}
+
+	[TestMethod]
 	public async Task CodeNameToStringInProcessAsync()
 	{
 		string serverPath = this.GenerateServerPath();

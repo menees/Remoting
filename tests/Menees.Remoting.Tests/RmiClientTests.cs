@@ -6,6 +6,21 @@ public class RmiClientTests : BaseTests
 	#region Public Methods
 
 	[TestMethod]
+	public void HasherExample()
+	{
+		const string ServerPath = "Menees.Remoting.RmiClientTests.HasherExample";
+
+		using RmiServer<IHasher> server = new(new Hasher(), ServerPath);
+		server.Start();
+
+		using RmiClient<IHasher> client = new(ServerPath);
+		IHasher proxy = client.CreateProxy();
+
+		proxy.Hash(new byte[] { 1, 2, 3, 4 }).Length.ShouldBe(20);
+		proxy.Hash("Testing").ShouldBe("0820b32b206b7352858e8903a838ed14319acdfd");
+	}
+
+	[TestMethod]
 	public void Constructor()
 	{
 		using (RmiClient<IServerHost> client = new(this.GetType().FullName!, loggerFactory: this.Loggers))
