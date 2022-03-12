@@ -121,6 +121,12 @@ internal sealed class PipeServerListener : IDisposable
 				this.State = ListenerState.ProcessingRequest;
 				try
 				{
+					// I considered supporting a PipeServerSecurity constructor with a RunAsClient bool property.
+					// If RunAsClient was true, then this would use NamedPipeServerStream.RunAsClient to invoke
+					// the server's ProcessRequestAsync function while impersonating the client. Unfortunately,
+					// the NamedPipeServerStream.RunAsClient method only supports a synchronous Action. Calling
+					// that would be "sync over async", which is bad due to deadlock risks. So RunAsClient is out.
+					// https://devblogs.microsoft.com/pfxteam/should-i-expose-synchronous-wrappers-for-asynchronous-methods/
 					await this.server.ProcessRequestAsync(this.pipe).ConfigureAwait(false);
 					this.State = ListenerState.FinishedRequest;
 				}
