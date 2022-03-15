@@ -2,7 +2,6 @@
 
 #region Using Directives
 
-using System.Diagnostics;
 using System.Reflection;
 using static System.Console;
 
@@ -29,12 +28,14 @@ public static class Program
 	{
 		ExitCode exitCode = ExitCode.Default;
 
-		const int RequiredArgCount = 6;
+		const int RequiredArgCount = 5;
 
+		// Sometimes a lighter weight option is to use SysInternals PipeList utility from PowerShell
+		// to see what pipes are open: .\pipelist.exe |select-string Menees
 		// Debugger.Launch();
 		if (args.Length != RequiredArgCount)
 		{
-			exitCode = FataError(ExitCode.MissingArgs, $"Usage: {nameof(ServerHost)} AssemblyPath TypeName ServerPathPrefix Max Min");
+			exitCode = FataError(ExitCode.MissingArgs, $"Usage: {nameof(TestHost)} AssemblyPath TypeName ServerPathPrefix Max Min");
 		}
 		else
 		{
@@ -46,11 +47,6 @@ public static class Program
 			{
 				int maxListeners = int.Parse(args[3]);
 				int minListeners = int.Parse(args[4]);
-				bool launchDebugger = bool.Parse(args[5]);
-				if (launchDebugger)
-				{
-					Debugger.Launch();
-				}
 
 				// .NET Framework supports Load(AssemblyName), but .NET Core requires LoadFrom().
 				Assembly assembly = Assembly.LoadFrom(assemblyPath);
@@ -90,7 +86,7 @@ public static class Program
 						using MessageServer<string, string> echoMessageServer = new(input => Task.FromResult(input), messageServerSettings);
 
 						string hostServerPath = serverPathPrefix + nameof(IServerHost);
-						using Menees.Remoting.ServerHost host = new();
+						using ServerHost host = new();
 						using RmiServer<IServerHost> hostServer = new(host, hostServerPath, 1, loggerFactory: logManager.Loggers);
 
 						host.Add(rmiServer);

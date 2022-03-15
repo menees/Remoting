@@ -43,6 +43,31 @@ public class BaseTests
 
 	#region Protected Methods
 
+	protected static Task TestCrossProcessClientAsync(int clientCount, string serverPathPrefix, Scenario scenario, int iterations)
+	{
+		TimeSpan timeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : ClientSettings.DefaultConnectTimeout;
+		Parallel.ForEach(
+			Enumerable.Range(1, clientCount),
+			new ParallelOptions { MaxDegreeOfParallelism = Math.Min(clientCount, 8 * Environment.ProcessorCount) },
+			item =>
+			{
+				InitializeProcessStartInfo(typeof(TestClient.Program), out ProcessStartInfo startInfo, out List<object> arguments);
+				arguments.Add(scenario);
+				arguments.Add(serverPathPrefix);
+				arguments.Add(timeout);
+				arguments.Add(iterations);
+				FinalizeProcessStartInfo(startInfo, arguments);
+
+				using Process clientProcess = new();
+				clientProcess.StartInfo = startInfo;
+				clientProcess.Start().ShouldBeTrue();
+				TimeSpan exitWait = TimeSpan.FromSeconds(30);
+				WaitForExit(clientProcess, exitWait, 0);
+			});
+
+		return Task.CompletedTask;
+	}
+
 	protected string GenerateServerPath([CallerMemberName] string? callerMemberName = null)
 	{
 		if (callerMemberName == null)
@@ -61,38 +86,17 @@ public class BaseTests
 		string serverPathPrefix,
 		Func<string, Task> testClientAsync,
 		int maxListeners,
-		int minListeners = 1)
+		int minListeners = 1,
+		Type? rmiServiceType = null)
 	{
-		string hostExeLocation = typeof(Program).Assembly.Location;
-
-		ProcessStartInfo startInfo = new();
-		List<string> arguments = new();
-		if (string.Equals(Path.GetExtension(hostExeLocation), ".exe", StringComparison.OrdinalIgnoreCase))
-		{
-			startInfo.FileName = Path.GetFileName(hostExeLocation);
-		}
-		else
-		{
-			startInfo.FileName = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\dotnet\dotnet.exe");
-			arguments.Add(hostExeLocation);
-		}
-
-		arguments.Add(typeof(Tester).Assembly.Location);
-		arguments.Add(typeof(Tester).FullName!);
+		InitializeProcessStartInfo(typeof(TestHost.Program), out ProcessStartInfo startInfo, out List<object> arguments);
+		rmiServiceType ??= typeof(Tester);
+		arguments.Add(rmiServiceType.Assembly.Location);
+		arguments.Add(rmiServiceType.FullName!);
 		arguments.Add(serverPathPrefix);
-		arguments.Add(maxListeners.ToString());
-		arguments.Add(minListeners.ToString());
-
-		// The current debugger can't be used. VS pops up a dialog to launch a new instance.
-		// Sometimes a lighter weight option is to use SysInternals PipeList utility from PowerShell
-		// to see what pipes are open: .\pipelist.exe |select-string Menees
-		bool debugServerHost = Debugger.IsAttached && Convert.ToBoolean(0);
-		arguments.Add(debugServerHost.ToString()); // LaunchDebugger
-
-		startInfo.CreateNoWindow = true;
-		startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-		startInfo.Arguments = string.Join(" ", arguments.Select(arg => $"\"{arg}\""));
-		startInfo.ErrorDialog = false;
+		arguments.Add(maxListeners);
+		arguments.Add(minListeners);
+		FinalizeProcessStartInfo(startInfo, arguments);
 
 		const int ExpectedExitCode = 12345;
 		using Process hostProcess = new();
@@ -116,16 +120,7 @@ public class BaseTests
 		finally
 		{
 			TimeSpan exitWait = TimeSpan.FromSeconds(5);
-			if (hostProcess.WaitForExit((int)exitWait.TotalMilliseconds))
-			{
-				hostProcess.WaitForExit(); // Let console finish flushing.
-				hostProcess.ExitCode.ShouldBe(ExpectedExitCode);
-			}
-			else
-			{
-				hostProcess.Kill();
-				Assert.Fail($"Host process didn't exit within wait time of {exitWait}.");
-			}
+			WaitForExit(hostProcess, exitWait, ExpectedExitCode);
 		}
 	}
 
@@ -161,6 +156,50 @@ public class BaseTests
 
 	private protected static void WriteUnhandledServerException(Exception ex)
 		=> Console.WriteLine("ERROR: Unhandled server exception: " + ex);
+
+	#endregion
+
+	#region Private Methods
+
+	private static void InitializeProcessStartInfo(Type hostProgram, out ProcessStartInfo startInfo, out List<object> arguments)
+	{
+		string hostExeLocation = hostProgram.Assembly.Location;
+
+		startInfo = new();
+		startInfo.CreateNoWindow = true;
+		startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+		startInfo.ErrorDialog = false;
+
+		arguments = new();
+		if (string.Equals(Path.GetExtension(hostExeLocation), ".exe", StringComparison.OrdinalIgnoreCase))
+		{
+			startInfo.FileName = Path.GetFileName(hostExeLocation);
+		}
+		else
+		{
+			startInfo.FileName = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\dotnet\dotnet.exe");
+			arguments.Add(hostExeLocation);
+		}
+	}
+
+	private static void FinalizeProcessStartInfo(ProcessStartInfo startInfo, List<object> arguments)
+	{
+		startInfo.Arguments = string.Join(" ", arguments.Select(arg => $"\"{arg}\""));
+	}
+
+	private static void WaitForExit(Process process, TimeSpan exitWait, int expectedExitCode, [CallerMemberName] string? caller = null)
+	{
+		if (process.WaitForExit((int)exitWait.TotalMilliseconds))
+		{
+			process.WaitForExit(); // Let console finish flushing.
+			process.ExitCode.ShouldBe(expectedExitCode);
+		}
+		else
+		{
+			process.Kill();
+			Assert.Fail($"{caller} process didn't exit within wait time of {exitWait}.");
+		}
+	}
 
 	#endregion
 }

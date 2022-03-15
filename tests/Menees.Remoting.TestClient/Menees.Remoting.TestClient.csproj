@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<OutputType>Exe</OutputType>
+	  <TargetFrameworks>$(MeneesTargetNetCoreBase);$(MeneesTargetNetFramework)</TargetFrameworks>
+	  <IsUnitTestProject>false</IsUnitTestProject>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\Menees.Remoting\Menees.Remoting.csproj" />
+		<ProjectReference Include="..\Menees.Remoting.TestHost\Menees.Remoting.TestHost.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Shouldly" Version="4.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="Shouldly" />
+	</ItemGroup>
+</Project>

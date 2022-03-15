@@ -103,5 +103,15 @@ public class RmiClientTests : BaseTests
 		TestProxy(testerProxy, TestId, isSingleClient: true);
 	}
 
+	[TestMethod]
+	public async Task CrossProcessServerAndClientAsync()
+	{
+		await this.TestCrossProcessServerAsync(
+			this.GenerateServerPathPrefix(),
+			async prefix => await TestCrossProcessClientAsync(10, prefix, Scenario.Calculator, 10).ConfigureAwait(false),
+			8,
+			rmiServiceType: typeof(Calculator)).ConfigureAwait(false);
+	}
+
 	#endregion
 }

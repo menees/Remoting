@@ -14,8 +14,4 @@
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="6.0.0" />
 	</ItemGroup>
-
-	<ItemGroup>
-		<Using Include="Menees.Remoting" />
-	</ItemGroup>
 </Project>

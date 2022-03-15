@@ -70,7 +70,7 @@ public class MessageNodeTests : BaseTests
 	}
 
 	[TestMethod]
-	public async Task CrossProcessAsync()
+	public async Task CrossProcessServerAsync()
 	{
 		await this.TestCrossProcessServerAsync(
 			this.GenerateServerPathPrefix(),
@@ -83,6 +83,15 @@ public class MessageNodeTests : BaseTests
 					(await echoClient.SendAsync(input).ConfigureAwait(false)).ShouldBe(input);
 				}
 			},
+			2).ConfigureAwait(false);
+	}
+
+	[TestMethod]
+	public async Task CrossProcessServerAndClientAsync()
+	{
+		await this.TestCrossProcessServerAsync(
+			this.GenerateServerPathPrefix(),
+			async prefix => await TestCrossProcessClientAsync(4, prefix, Scenario.Message, 5).ConfigureAwait(false),
 			2).ConfigureAwait(false);
 	}
 
