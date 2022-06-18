@@ -30,15 +30,19 @@ public sealed class LogManager : IDisposable
 			// Make the messages show up in the debugger's Output window.
 			builder.AddDebug();
 
-			// The Microsoft.Extensions.Logging.Console provider behaves terribly in multi-threaded unit tests.
-			// Even when recreating the ILoggerFactory for each test, it shares a single logging scope for all
-			// ILogger<T> instances of the same type. So two PipeServer instances share the same logger instance
-			// and the same scope instance! That means BeginScope calls pile up when N instances are active. :-(
-			// https://codeburst.io/unit-testing-with-net-core-ilogger-t-e8c16c503a80
-			// So I wrote my own ImmediateConsoleLoggerProvider that's aware of async call contexts.
-			// But since it doesn't do any buffering, it is very slow on large tests!
-			this.consoleLoggerProvider = new ImmediateConsoleLoggerProvider(consoleLogLevel);
-			builder.AddProvider(this.consoleLoggerProvider);
+			if (Convert.ToBoolean(1))
+			{
+				builder.AddConsole();
+			}
+			else
+			{
+				// The Microsoft.Extensions.Logging.Console provider behaves weird in multi-threaded unit tests due to buffering.
+				// https://codeburst.io/unit-testing-with-net-core-ilogger-t-e8c16c503a80
+				// So I wrote my own ImmediateConsoleLoggerProvider that's aware of async call contexts.
+				// But since it doesn't do any buffering, it is VERY slow on large tests!
+				this.consoleLoggerProvider = new ImmediateConsoleLoggerProvider(consoleLogLevel);
+				builder.AddProvider(this.consoleLoggerProvider);
+			}
 		});
 	}
 
@@ -157,6 +161,10 @@ public sealed class LogManager : IDisposable
 				Stack<object?>? contextStack = this.callContextStack.Value;
 				if (contextStack != null)
 				{
+					// TODO: This is not thread-safe! AsyncLocal values can be accessed by multiple Tasks at once! [Bill, 6/18/2022]
+					// This got InvalidOperationException "Collection was modified after the enumerator was instantiated." during a
+					// MultiServerLarge test on .NET Framework.
+					// https://stackoverflow.com/a/63732530/1882616
 					foreach (object? value in contextStack)
 					{
 						sb.Append(' ');
