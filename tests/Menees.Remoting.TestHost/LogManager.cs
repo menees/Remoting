@@ -13,15 +13,14 @@ public sealed class LogManager : IDisposable
 	#region Private Data Members
 
 	private ILoggerFactory? loggerFactory;
-	private ImmediateConsoleLoggerProvider? consoleLoggerProvider;
 
 	#endregion
 
 	#region Constructors
 
-	public LogManager(LogLevel minimumLogLevel = LogLevel.Debug, LogLevel consoleLogLevel = LogLevel.Debug)
+	public LogManager(LogLevel minimumLogLevel = LogLevel.Debug)
 	{
-		this.loggerFactory = LoggerFactory.Create(builder =>
+		this.loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
 		{
 			builder.ClearProviders();
 
@@ -30,19 +29,14 @@ public sealed class LogManager : IDisposable
 			// Make the messages show up in the debugger's Output window.
 			builder.AddDebug();
 
-			if (Convert.ToBoolean(1))
+			// The Microsoft.Extensions.Logging.Console provider behaves weird in multi-threaded unit tests due to buffering.
+			// So we'll dispose the whole loggerFactory after each test to try to force everything to flush out then.
+			// https://codeburst.io/unit-testing-with-net-core-ilogger-t-e8c16c503a80
+			builder.AddSimpleConsole(options =>
 			{
-				builder.AddConsole();
-			}
-			else
-			{
-				// The Microsoft.Extensions.Logging.Console provider behaves weird in multi-threaded unit tests due to buffering.
-				// https://codeburst.io/unit-testing-with-net-core-ilogger-t-e8c16c503a80
-				// So I wrote my own ImmediateConsoleLoggerProvider that's aware of async call contexts.
-				// But since it doesn't do any buffering, it is VERY slow on large tests!
-				this.consoleLoggerProvider = new ImmediateConsoleLoggerProvider(consoleLogLevel);
-				builder.AddProvider(this.consoleLoggerProvider);
-			}
+				options.IncludeScopes = true;
+				options.TimestampFormat = "HH:mm:ss.fff ";
+			});
 		});
 	}
 
@@ -50,7 +44,7 @@ public sealed class LogManager : IDisposable
 
 	#region Public Properties
 
-	public ILoggerFactory Loggers => this.loggerFactory ?? NullLoggerFactory.Instance;
+	public ILoggerFactory LoggerFactory => this.loggerFactory ?? NullLoggerFactory.Instance;
 
 	#endregion
 
@@ -60,231 +54,6 @@ public sealed class LogManager : IDisposable
 	{
 		this.loggerFactory?.Dispose();
 		this.loggerFactory = null;
-		this.consoleLoggerProvider?.Dispose();
-		this.consoleLoggerProvider = null;
-	}
-
-	#endregion
-
-	#region Private Types
-
-	private sealed class ImmediateConsoleLoggerProvider : ILoggerProvider
-	{
-		#region Private Data Members
-
-		private readonly LogLevel minLevel;
-
-		#endregion
-
-		#region Constructors
-
-		public ImmediateConsoleLoggerProvider(LogLevel minLevel)
-		{
-			this.minLevel = minLevel;
-		}
-
-		#endregion
-
-		#region Public Methods
-
-		public ILogger CreateLogger(string categoryName) => new ImmediateConsoleLogger(categoryName, this.minLevel);
-
-		public void Dispose()
-		{
-		}
-
-		#endregion
-
-		private sealed class ImmediateConsoleLogger : ILogger
-		{
-			#region Private Data Members
-
-			private readonly string categoryName;
-			private readonly LogLevel minLevel;
-			private readonly AsyncLocal<Stack<object?>> callContextStack = new();
-
-			#endregion
-
-			#region Constructors
-
-			public ImmediateConsoleLogger(string categoryName, LogLevel minLevel)
-			{
-				this.categoryName = categoryName;
-				this.minLevel = minLevel;
-			}
-
-			#endregion
-
-			#region Public Methods
-
-			public IDisposable BeginScope<TState>(TState state)
-			{
-				this.callContextStack.Value ??= new();
-				IDisposable result = new Scope(this.callContextStack.Value, state);
-				return result;
-			}
-
-			public bool IsEnabled(LogLevel logLevel) => logLevel >= this.minLevel;
-
-			public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-			{
-				string levelName = logLevel switch
-				{
-					LogLevel.Trace => "TRC",
-					LogLevel.Debug => "DBG",
-					LogLevel.Information => "INF",
-					LogLevel.Warning => "WRN",
-					LogLevel.Error => "ERR",
-					LogLevel.Critical => "CRT",
-					LogLevel.None => "NON",
-					_ => logLevel.ToString(),
-				};
-
-				StringBuilder sb = new();
-				sb.AppendFormat("[{0:HH:mm:ss.fff} {1}] ", DateTime.Now, levelName);
-				if (eventId.Id != 0)
-				{
-					sb.Append('#').Append(eventId.Id).Append(' ');
-				}
-
-				sb.Append(this.categoryName).Append(' ');
-
-				string message = formatter(state, null);
-				sb.Append(message);
-				if (exception != null)
-				{
-					sb.Append(' ');
-					Append(sb, exception, tag: "Exception: ");
-				}
-
-				// This will be null if a logger user never calls BeginScope.
-				Stack<object?>? contextStack = this.callContextStack.Value;
-				if (contextStack != null)
-				{
-					// TODO: This is not thread-safe! AsyncLocal values can be accessed by multiple Tasks at once! [Bill, 6/18/2022]
-					// This got InvalidOperationException "Collection was modified after the enumerator was instantiated." during a
-					// MultiServerLarge test on .NET Framework.
-					// https://stackoverflow.com/a/63732530/1882616
-					foreach (object? value in contextStack)
-					{
-						sb.Append(' ');
-						Append(sb, value);
-					}
-				}
-
-				string line = sb.ToString();
-				Console.WriteLine(line);
-			}
-
-			#endregion
-
-			#region Private Methods
-
-			private static void Append(StringBuilder sb, object? value, bool delimit = true, string? tag = null)
-			{
-				if (delimit)
-				{
-					sb.Append('{');
-				}
-
-				sb.Append(tag);
-
-				switch (value)
-				{
-					case string text:
-						sb.Append(text);
-						break;
-
-					case IDictionary dictionary:
-						foreach (DictionaryEntry entry in dictionary)
-						{
-							Append(sb, entry.Key, delimit: entry.Key is not string);
-							sb.Append('=');
-							Append(sb, entry.Value, delimit: entry.Value is not string);
-						}
-
-						break;
-
-					case IEnumerable enumerable:
-						foreach (object? item in enumerable)
-						{
-							Append(sb, item);
-						}
-
-						break;
-
-					case Exception ex:
-						// Some exception messages end with newlines.
-						sb.Append(ex.Message.TrimEnd());
-						if (ex.HResult != 0)
-						{
-							sb.Append(' ').Append("HResult=0x").AppendFormat("{0:X2}", ex.HResult);
-						}
-
-						if (ex.InnerException != null)
-						{
-							sb.Append(' ');
-							Append(sb, ex.InnerException);
-						}
-
-						break;
-
-					default:
-						sb.Append(value);
-						break;
-				}
-
-				if (delimit)
-				{
-					sb.Append('}');
-				}
-			}
-
-			#endregion
-
-			#region Private Types
-
-			private sealed class Scope : IDisposable
-			{
-				#region Private Data Members
-
-				private readonly object monitor = new();
-				private Stack<object?>? scope;
-
-				#endregion
-
-				#region Constructors
-
-				public Scope(Stack<object?> scope, object? state)
-				{
-					this.scope = scope;
-					this.scope.Push(state);
-				}
-
-				#endregion
-
-				#region Public Methods
-
-				public void Dispose()
-				{
-					// Protect against simultaneous multi-threaded disposal (e.g., PipeServerListener.Dispose()).
-					lock (this.monitor)
-					{
-						Stack<object?>? stack = this.scope;
-						this.scope = null;
-
-						if (stack?.Count > 0)
-						{
-							stack.Pop();
-						}
-					}
-				}
-
-				#endregion
-			}
-
-			#endregion
-		}
 	}
 
 	#endregion

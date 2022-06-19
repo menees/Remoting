@@ -52,14 +52,14 @@ public static class Program
 				ClientSettings rmiClientSettings = new(serverPathPrefix + nameof(ICalculator))
 				{
 					ConnectTimeout = connectTimeout,
-					LoggerFactory = logManager.Loggers,
+					CreateLogger = logManager.LoggerFactory.CreateLogger,
 				};
 				using RmiClient<ICalculator> rmiClient = new(rmiClientSettings);
 
 				ClientSettings messageClientSettings = new(serverPathPrefix + "Echo")
 				{
 					ConnectTimeout = connectTimeout,
-					LoggerFactory = logManager.Loggers,
+					CreateLogger = logManager.LoggerFactory.CreateLogger,
 				};
 				using MessageClient<string, string> echoMessageClient = new(messageClientSettings);
 

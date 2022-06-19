@@ -21,7 +21,7 @@ public class RmiServerTests : BaseTests
 	{
 		string serverPath = this.GenerateServerPath();
 		string expected = Guid.NewGuid().ToString();
-		using RmiServer<ICloneable> server = new(expected, serverPath, loggerFactory: this.Loggers);
+		using RmiServer<ICloneable> server = new(expected, serverPath, loggerFactory: this.LoggerFactory);
 
 		// This is a super weak, insecure example since it just checks for the word "System".
 		server.TryGetType = typeName => typeName.Contains(nameof(System))
@@ -31,7 +31,7 @@ public class RmiServerTests : BaseTests
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		server.Start();
 
-		using RmiClient<ICloneable> client = new(serverPath, loggerFactory: this.Loggers);
+		using RmiClient<ICloneable> client = new(serverPath, loggerFactory: this.LoggerFactory);
 		ICloneable proxy = client.CreateProxy();
 		string actual = (string)proxy.Clone();
 		actual.ShouldBe(expected);
@@ -70,11 +70,11 @@ public class RmiServerTests : BaseTests
 	{
 		string serverPath = this.GenerateServerPath();
 		using ServerHost host = new();
-		using RmiServer<IServerHost> server = new(host, serverPath, 2, 2, loggerFactory: this.Loggers);
+		using RmiServer<IServerHost> server = new(host, serverPath, 2, 2, loggerFactory: this.LoggerFactory);
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		host.Add(server);
 
-		using RmiClient<IServerHost> client = new(serverPath, connectTimeout: TimeSpan.FromSeconds(2), loggerFactory: this.Loggers);
+		using RmiClient<IServerHost> client = new(serverPath, connectTimeout: TimeSpan.FromSeconds(2), loggerFactory: this.LoggerFactory);
 		IServerHost proxy = client.CreateProxy();
 		IServerHost direct = host;
 		proxy.IsReady.ShouldBeTrue();
@@ -147,7 +147,7 @@ public class RmiServerTests : BaseTests
 		{
 			MaxListeners = maxServerListeners,
 			MinListeners = minServerListeners,
-			LoggerFactory = this.Loggers,
+			CreateLogger = this.LoggerFactory.CreateLogger,
 			Security = serverSecurity,
 		};
 
@@ -177,7 +177,7 @@ public class RmiServerTests : BaseTests
 				ClientSettings clientSettings = new(serverPath)
 				{
 					ConnectTimeout = timeout,
-					LoggerFactory = this.Loggers,
+					CreateLogger = this.LoggerFactory.CreateLogger,
 					Security = clientSecurity,
 				};
 

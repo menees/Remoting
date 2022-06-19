@@ -20,7 +20,7 @@ public class BaseTests
 
 	#region Public Properties
 
-	public ILoggerFactory Loggers => this.logManager?.Loggers ?? NullLoggerFactory.Instance;
+	public ILoggerFactory LoggerFactory => this.logManager?.LoggerFactory ?? NullLoggerFactory.Instance;
 
 	#endregion
 
@@ -109,7 +109,7 @@ public class BaseTests
 
 			TimeSpan connectTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(2);
 			string hostServerPath = $"{serverPathPrefix}{nameof(IServerHost)}";
-			using RmiClient<IServerHost> hostClient = new(hostServerPath, connectTimeout: connectTimeout, loggerFactory: this.Loggers);
+			using RmiClient<IServerHost> hostClient = new(hostServerPath, connectTimeout: connectTimeout, loggerFactory: this.LoggerFactory);
 			IServerHost serverHost = hostClient.CreateProxy();
 			serverHost.IsReady.ShouldBeTrue();
 

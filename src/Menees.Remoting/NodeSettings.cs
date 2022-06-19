@@ -44,9 +44,16 @@ public abstract class NodeSettings
 	public ISerializer? Serializer { get; set; }
 
 	/// <summary>
-	/// Gets or sets an optional factory for creating type-specific server loggers for status information.
+	/// Gets or sets an optional function for creating categorized loggers for status information.
 	/// </summary>
-	public ILoggerFactory? LoggerFactory { get; set; }
+	/// <remarks>
+	/// An <see cref="ILoggerFactory.CreateLogger(string)"/> method can be assigned to this.
+	/// We don't require a full <see cref="ILoggerFactory"/> interface since we never need to
+	/// call its <see cref="ILoggerFactory.AddProvider(ILoggerProvider)"/> method. Technically,
+	/// an <see cref="ILoggerProvider.CreateLogger(string)"/> method could also be used, but
+	/// that would be atypical.
+	/// </remarks>
+	public Func<string, ILogger>? CreateLogger { get; set; }
 
 	/// <summary>
 	/// Gets security settings.

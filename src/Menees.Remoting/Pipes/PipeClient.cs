@@ -22,8 +22,8 @@ internal sealed class PipeClient : PipeNode
 
 	#region Constructors
 
-	internal PipeClient(string pipeName, string serverName, ILoggerFactory loggers, PipeClientSecurity? security)
-		: base(pipeName, loggers)
+	internal PipeClient(string pipeName, string serverName, Node owner, PipeClientSecurity? security)
+		: base(pipeName, owner)
 	{
 		this.ServerName = serverName;
 		this.security = security;

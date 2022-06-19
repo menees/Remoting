@@ -39,7 +39,7 @@ public sealed class MessageClient<TIn, TOut> : MessageNode<TIn, TOut>
 		: this(new ClientSettings(serverPath)
 		{
 			ConnectTimeout = connectTimeout ?? ClientSettings.DefaultConnectTimeout,
-			LoggerFactory = loggerFactory,
+			CreateLogger = loggerFactory != null ? loggerFactory.CreateLogger : null,
 		})
 	{
 	}
@@ -57,7 +57,7 @@ public sealed class MessageClient<TIn, TOut> : MessageNode<TIn, TOut>
 		}
 
 		this.ConnectTimeout = settings.ConnectTimeout;
-		this.pipe = new(settings.ServerPath, settings.ServerHost, this.Loggers, (PipeClientSecurity?)settings.Security);
+		this.pipe = new(settings.ServerPath, settings.ServerHost, this, (PipeClientSecurity?)settings.Security);
 	}
 
 	#endregion

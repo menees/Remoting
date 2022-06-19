@@ -36,10 +36,10 @@ public class MessageNodeTests : BaseTests
 		using MessageServer<CodeName, string> server = new(
 			async codeName => await Task.FromResult($"{codeName.Code}: {codeName.Name}").ConfigureAwait(false),
 			serverPath,
-			loggerFactory: this.Loggers);
+			loggerFactory: this.LoggerFactory);
 		server.Start();
 
-		using MessageClient<CodeName, string> client = new(serverPath, loggerFactory: this.Loggers);
+		using MessageClient<CodeName, string> client = new(serverPath, loggerFactory: this.LoggerFactory);
 		string response = await client.SendAsync(new CodeName { Code = 1, Name = "Billy" }).ConfigureAwait(false);
 		response.ShouldBe("1: Billy");
 		response = await client.SendAsync(new CodeName { Code = 2, Name = "Bob" }).ConfigureAwait(false);
@@ -55,10 +55,10 @@ public class MessageNodeTests : BaseTests
 			async text => await Task.FromResult(new CodeName { Code = text.Length, Name = text }).ConfigureAwait(false),
 			serverPath,
 			maxListeners: 10,
-			loggerFactory: this.Loggers);
+			loggerFactory: this.LoggerFactory);
 		server.Start();
 
-		using MessageClient<string, CodeName> client = new(serverPath, loggerFactory: this.Loggers);
+		using MessageClient<string, CodeName> client = new(serverPath, loggerFactory: this.LoggerFactory);
 		IEnumerable<Task> tasks = Enumerable.Range(1, 20).Select(async item =>
 		{
 			string combined = "Item " + item;
@@ -76,7 +76,7 @@ public class MessageNodeTests : BaseTests
 			this.GenerateServerPathPrefix(),
 			async prefix =>
 			{
-				using MessageClient<string, string> echoClient = new(prefix + "Echo", loggerFactory: this.Loggers);
+				using MessageClient<string, string> echoClient = new(prefix + "Echo", loggerFactory: this.LoggerFactory);
 				for (int i = 1; i <= 5; i++)
 				{
 					string input = $"Test {i}";
@@ -104,7 +104,7 @@ public class MessageNodeTests : BaseTests
 		ServerSettings serverSettings = new(serverPath)
 		{
 			CancellationToken = serverCancellationSource.Token,
-			LoggerFactory = this.Loggers,
+			CreateLogger = this.LoggerFactory.CreateLogger,
 		};
 		using MessageServer<string, int> server = new(
 			async (value, cancel) =>
@@ -120,7 +120,7 @@ public class MessageNodeTests : BaseTests
 			serverSettings);
 		server.Start();
 
-		using MessageClient<string, int> client = new(serverPath, loggerFactory: this.Loggers);
+		using MessageClient<string, int> client = new(serverPath, loggerFactory: this.LoggerFactory);
 		using CancellationTokenSource clientCancellationSource = new(TimeSpan.FromSeconds(0.5));
 		try
 		{
@@ -160,10 +160,10 @@ public class MessageNodeTests : BaseTests
 				return await Task.FromResult(value.ToString()).ConfigureAwait(false);
 			},
 			serverPath,
-			loggerFactory: this.Loggers);
+			loggerFactory: this.LoggerFactory);
 		server.Start();
 
-		using MessageClient<int, string> client = new(serverPath, loggerFactory: this.Loggers);
+		using MessageClient<int, string> client = new(serverPath, loggerFactory: this.LoggerFactory);
 		for (int i = 0; i < 2; i++)
 		{
 			try
@@ -208,7 +208,7 @@ public class MessageNodeTests : BaseTests
 
 			ServerSettings serverSettings = new(serverPath)
 			{
-				LoggerFactory = this.Loggers,
+				CreateLogger = this.LoggerFactory.CreateLogger,
 				Security = serverSecurity,
 			};
 			using MessageServer<CodeName, string> server = new(
@@ -218,7 +218,7 @@ public class MessageNodeTests : BaseTests
 
 			ClientSettings clientSettings = new(serverPath)
 			{
-				LoggerFactory = this.Loggers,
+				CreateLogger = this.LoggerFactory.CreateLogger,
 				Security = clientSecurity,
 			};
 			using MessageClient<CodeName, string> client = new(clientSettings);

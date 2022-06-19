@@ -11,19 +11,17 @@ internal abstract class PipeNode : IDisposable
 {
 	#region Private Data Members
 
-	private IDisposable? logScope;
-	private bool disposed;
+	private readonly Lazy<ILogger> lazyLogger;
 
 	#endregion
 
 	#region Constructors
 
-	protected PipeNode(string pipeName, ILoggerFactory loggers)
+	protected PipeNode(string pipeName, Node owner)
 	{
 		this.PipeName = pipeName;
-		this.Loggers = loggers;
-		this.Logger = loggers.CreateLogger(this.GetType());
-		this.logScope = this.Logger.BeginScope(this.CreateScope());
+		this.Owner = owner;
+		this.lazyLogger = new(() => owner.CreateLogger(this.GetType()));
 	}
 
 	#endregion
@@ -47,9 +45,9 @@ internal abstract class PipeNode : IDisposable
 
 	#region Private Protected Properties
 
-	private protected ILogger Logger { get; }
+	private protected ILogger Logger => this.lazyLogger.Value;
 
-	private protected ILoggerFactory Loggers { get; }
+	private protected Node Owner { get; }
 
 	#endregion
 
@@ -61,13 +59,6 @@ internal abstract class PipeNode : IDisposable
 		this.Dispose(disposing: true);
 		GC.SuppressFinalize(this);
 	}
-
-	#endregion
-
-	#region Internal Methods
-
-	internal Dictionary<string, object> CreateScope()
-		=> new() { { nameof(this.PipeName), this.PipeName } };
 
 	#endregion
 
@@ -92,16 +83,6 @@ internal abstract class PipeNode : IDisposable
 
 	protected virtual void Dispose(bool disposing)
 	{
-		if (!this.disposed)
-		{
-			if (disposing)
-			{
-				this.logScope?.Dispose();
-				this.logScope = null;
-			}
-
-			this.disposed = true;
-		}
 	}
 
 	#endregion

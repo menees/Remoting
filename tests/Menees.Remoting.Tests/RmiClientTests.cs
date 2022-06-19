@@ -23,12 +23,12 @@ public class RmiClientTests : BaseTests
 	[TestMethod]
 	public void Constructor()
 	{
-		using (RmiClient<IServerHost> client = new(this.GetType().FullName!, loggerFactory: this.Loggers))
+		using (RmiClient<IServerHost> client = new(this.GetType().FullName!, loggerFactory: this.LoggerFactory))
 		{
 			client.ConnectTimeout.ShouldBe(ClientSettings.DefaultConnectTimeout);
 		}
 
-		using (RmiClient<IServerHost> client = new(this.GetType().FullName!, connectTimeout: TimeSpan.FromSeconds(1), loggerFactory: this.Loggers))
+		using (RmiClient<IServerHost> client = new(this.GetType().FullName!, connectTimeout: TimeSpan.FromSeconds(1), loggerFactory: this.LoggerFactory))
 		{
 			client.ConnectTimeout.ShouldBe(TimeSpan.FromSeconds(1));
 		}
@@ -39,12 +39,12 @@ public class RmiClientTests : BaseTests
 	{
 		string serverPath = this.GenerateServerPath();
 
-		using RmiClient<ITester> client = new(serverPath, connectTimeout: TimeSpan.FromSeconds(2), loggerFactory: this.Loggers);
+		using RmiClient<ITester> client = new(serverPath, connectTimeout: TimeSpan.FromSeconds(2), loggerFactory: this.LoggerFactory);
 		ITester testerProxy = client.CreateProxy();
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(tester, serverPath, loggerFactory: this.Loggers);
+		using RmiServer<ITester> server = new(tester, serverPath, loggerFactory: this.LoggerFactory);
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 
@@ -57,12 +57,12 @@ public class RmiClientTests : BaseTests
 	{
 		string serverPath = this.GenerateServerPath();
 
-		using RmiClient<ITester> client = new(serverPath, loggerFactory: this.Loggers);
+		using RmiClient<ITester> client = new(serverPath, loggerFactory: this.LoggerFactory);
 		ITester testerProxy = client.CreateProxy();
 		testerProxy.ShouldNotBeNull();
 
 		Tester tester = new();
-		using RmiServer<ITester> server = new(tester, serverPath, loggerFactory: this.Loggers);
+		using RmiServer<ITester> server = new(tester, serverPath, loggerFactory: this.LoggerFactory);
 		server.ReportUnhandledException = RmiServerTests.WriteUnhandledServerException;
 		server.Start();
 
@@ -81,7 +81,7 @@ public class RmiClientTests : BaseTests
 		ClientSettings clientSettings = new(serverPath)
 		{
 			ConnectTimeout = TimeSpan.FromSeconds(2),
-			LoggerFactory = this.Loggers,
+			CreateLogger = this.LoggerFactory.CreateLogger,
 			Serializer = new TestSerializer(),
 		};
 
@@ -91,7 +91,7 @@ public class RmiClientTests : BaseTests
 
 		ServerSettings serverSettings = new(serverPath)
 		{
-			LoggerFactory = this.Loggers,
+			CreateLogger = this.LoggerFactory.CreateLogger,
 			Serializer = new TestSerializer(),
 		};
 		Tester tester = new();

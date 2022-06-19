@@ -72,7 +72,7 @@ public static class Program
 						{
 							MaxListeners = maxListeners,
 							MinListeners = minListeners,
-							LoggerFactory = logManager.Loggers,
+							CreateLogger = logManager.LoggerFactory.CreateLogger,
 						};
 						object serviceInstance = Activator.CreateInstance(serviceType)!;
 						using IServer rmiServer = (IServer)Activator.CreateInstance(serverType, serviceInstance, rmiServerSettings)!;
@@ -81,13 +81,13 @@ public static class Program
 						{
 							MaxListeners = maxListeners,
 							MinListeners = minListeners,
-							LoggerFactory = logManager.Loggers,
+							CreateLogger = logManager.LoggerFactory.CreateLogger,
 						};
 						using MessageServer<string, string> echoMessageServer = new(input => Task.FromResult(input), messageServerSettings);
 
 						string hostServerPath = serverPathPrefix + nameof(IServerHost);
 						using ServerHost host = new();
-						using RmiServer<IServerHost> hostServer = new(host, hostServerPath, 1, loggerFactory: logManager.Loggers);
+						using RmiServer<IServerHost> hostServer = new(host, hostServerPath, 1, loggerFactory: logManager.LoggerFactory);
 
 						host.Add(rmiServer);
 						host.Add(echoMessageServer);

@@ -74,7 +74,7 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 		{
 			MaxListeners = maxListeners,
 			MinListeners = minListeners,
-			LoggerFactory = loggerFactory,
+			CreateLogger = loggerFactory != null ? loggerFactory.CreateLogger : null,
 		})
 	{
 	}
@@ -119,7 +119,7 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 			settings.MaxListeners,
 			this.ProcessRequestAsync,
 			this,
-			this.Loggers,
+			this,
 			(PipeServerSecurity?)settings.Security);
 
 		if (settings.CancellationToken != CancellationToken.None)

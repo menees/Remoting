@@ -29,7 +29,7 @@
 
 		<!-- Make the assembly, file, and NuGet package versions the same. -->
 		<!-- https://docs.microsoft.com/en-us/nuget/concepts/package-versioning#pre-release-versions -->
-		<Version>0.3.0-alpha</Version>
+		<Version>0.4.0-alpha</Version>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
@@ -76,7 +76,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Menees.Analyzers" Version="3.0.5">
+		<PackageReference Include="Menees.Analyzers" Version="3.0.6">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -88,7 +88,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.1.46">
+		<PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.2.32">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
 		</PackageReference>	</ItemGroup>

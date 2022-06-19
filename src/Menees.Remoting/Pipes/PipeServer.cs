@@ -28,9 +28,9 @@ internal sealed class PipeServer : PipeNode
 		int maxListeners,
 		Func<Stream, Task> processRequestAsync,
 		IServer server,
-		ILoggerFactory loggers,
+		Node owner,
 		PipeServerSecurity? security)
-		: base(pipeName, loggers)
+		: base(pipeName, owner)
 	{
 		if (minListeners <= 0)
 		{
@@ -147,7 +147,7 @@ internal sealed class PipeServer : PipeNode
 								break;
 							}
 
-							PipeServerListener listener = new(this, pipe, this.Loggers.CreateLogger<PipeServerListener>());
+							PipeServerListener listener = new(this, pipe, this.Owner);
 							this.listeners.Add(listener);
 
 							// Note: We're intentionally not waiting on this to return. This is a true fire-and-forget case.

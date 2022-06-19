@@ -29,7 +29,7 @@ internal static class ServerUtility
 		}
 		catch (Exception ex)
 		{
-			node.Loggers.CreateLogger(node.GetType()).LogError(ex, "Exception while server was processing a request.");
+			node.CreateLogger(node.GetType()).LogError(ex, "Exception while server was processing a request.");
 			server.ReportUnhandledException?.Invoke(ex);
 
 			try
@@ -53,11 +53,11 @@ internal static class ServerUtility
 			// We can get an ObjectDisposedException("Cannot access a closed pipe.")
 			// when WriteToAsync calls FlushAsync() on the stream if the client has already
 			// received all the data, processed it quickly, and closed the pipe. That's ok.
-			node.Loggers.CreateLogger(node.GetType()).LogDebug(ex, "Client closed connection while server was finishing write.");
+			node.CreateLogger(node.GetType()).LogDebug(ex, "Client closed connection while server was finishing write.");
 		}
 		catch (Exception ex)
 		{
-			node.Loggers.CreateLogger(node.GetType()).LogError(ex, "Unhandled exception while server was finishing write.");
+			node.CreateLogger(node.GetType()).LogError(ex, "Unhandled exception while server was finishing write.");
 			server.ReportUnhandledException?.Invoke(ex);
 		}
 	}

@@ -50,7 +50,7 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 		{
 			MaxListeners = maxListeners,
 			MinListeners = minListeners,
-			LoggerFactory = loggerFactory,
+			CreateLogger = loggerFactory != null ? loggerFactory.CreateLogger : null,
 		})
 	{
 	}
@@ -78,7 +78,7 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 			settings.MaxListeners,
 			this.ProcessRequestAsync,
 			this,
-			this.Loggers,
+			this,
 			(PipeServerSecurity?)settings.Security);
 		this.cancellationToken = settings.CancellationToken;
 	}
