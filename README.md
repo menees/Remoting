@@ -1,4 +1,4 @@
-![windows build & test](https://github.com/menees/Remoting/workflows/windows%20build%20&%20test/badge.svg)
+![windows build & test](https://github.com/menees/Remoting/workflows/windows%20build%20&%20test/badge.svg) [![Nuget](https://img.shields.io/nuget/v/Menees.Remoting)](https://www.nuget.org/packages/Menees.Remoting/)
 
 # Remoting
 This repo provides a simple [RMI](https://en.wikipedia.org/wiki/Remote_method_invocation) and [IPC](https://en.wikipedia.org/wiki/Inter-process_communication)
