@@ -32,7 +32,11 @@ public static class Program
 
 		// Sometimes a lighter weight option is to use SysInternals PipeList utility from PowerShell
 		// to see what pipes are open: .\pipelist.exe |select-string Menees
-		// Debugger.Launch();
+		// Or use PowerShell dir command: dir -path \\.\pipe\ -filter *Menees* |select Name
+		// Or use the C# interactive window:
+		// Directory.EnumerateFiles(@"\\.\pipe\", "*Menees*", SearchOption.AllDirectories)
+		/* Debugger.Launch(); */
+
 		if (args.Length != RequiredArgCount)
 		{
 			exitCode = FataError(ExitCode.MissingArgs, $"Usage: {nameof(TestHost)} AssemblyPath TypeName ServerPathPrefix Max Min");

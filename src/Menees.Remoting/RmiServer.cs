@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Exposes the <typeparamref name="TServiceInterface"/> interface from a given service object instance
-/// as a remotely invokable server.
+/// as a remotely invocable server.
 /// </summary>
 /// <typeparam name="TServiceInterface">The interface to make available for remote invocation.</typeparam>
 public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, IServer
@@ -38,7 +38,7 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 	/// <param name="serviceInstance">An instance of <typeparamref name="TServiceInterface"/> on which to execute remote invocations.</param>
 	/// <param name="serverPath">The path used to expose the service.</param>
 	/// <param name="maxListeners">The maximum number of server listener tasks to start.</param>
-	/// <param name="minListeners">The minimim number of server listener tasks to start.</param>
+	/// <param name="minListeners">The minimum number of server listener tasks to start.</param>
 	/// <param name="loggerFactory">An optional factory for creating type-specific server loggers for status information.</param>
 	public RmiServer(
 		TServiceInterface serviceInstance,

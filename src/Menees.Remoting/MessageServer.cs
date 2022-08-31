@@ -36,7 +36,7 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 	/// </param>
 	/// <param name="serverPath">The path used to expose the service.</param>
 	/// <param name="maxListeners">The maximum number of server listener tasks to start.</param>
-	/// <param name="minListeners">The minimim number of server listener tasks to start.</param>
+	/// <param name="minListeners">The minimum number of server listener tasks to start.</param>
 	/// <param name="loggerFactory">An optional factory for creating type-specific server loggers for status information.</param>
 	public MessageServer(
 		Func<TIn, Task<TOut>> requestHandler,
@@ -62,7 +62,7 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 	/// </param>
 	/// <param name="serverPath">The path used to expose the service.</param>
 	/// <param name="maxListeners">The maximum number of server listener tasks to start.</param>
-	/// <param name="minListeners">The minimim number of server listener tasks to start.</param>
+	/// <param name="minListeners">The minimum number of server listener tasks to start.</param>
 	/// <param name="loggerFactory">An optional factory for creating type-specific server loggers for status information.</param>
 	public MessageServer(
 		Func<TIn, CancellationToken, Task<TOut>> requestHandler,

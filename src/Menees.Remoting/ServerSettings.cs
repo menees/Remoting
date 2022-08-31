@@ -42,7 +42,7 @@ public sealed class ServerSettings : NodeSettings
 	public int MaxListeners { get; set; } = MaxAllowedListeners;
 
 	/// <summary>
-	/// Gets or sets the minimim number of server listener tasks to start.
+	/// Gets or sets the minimum number of server listener tasks to start.
 	/// </summary>
 	/// <remarks>
 	/// This defaults to 1.
