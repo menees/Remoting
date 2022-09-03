@@ -74,13 +74,27 @@ public class RmiServerTests : BaseTests
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		host.Add(server);
 
-		using RmiClient<IServerHost> client = new(serverPath, connectTimeout: TimeSpan.FromSeconds(2), loggerFactory: this.LoggerFactory);
+		// When this test runs by itself a short timeout is ok. When run with other tests that use a lot of
+		// client connections (e.g., MessageNodeTests.StringToCodeNameInProcessAsync), then this client's
+		// proxies on .NET Framework can get a semaphore timeout inside NamedPipeClientStream.Connect.
+		// That doesn't happen with .NET Core. Since we intentionally test for a TimeoutException at the
+		// end, we want this timeout to be as short as we can get away with.
+		TimeSpan connectTimeout = TimeSpan.FromSeconds(IsDotNetFramework ? 10 : 2);
+		using RmiClient<IServerHost> client = new(serverPath, connectTimeout, loggerFactory: this.LoggerFactory);
 		IServerHost proxy = client.CreateProxy();
 		IServerHost direct = host;
 		proxy.IsReady.ShouldBeTrue();
 		direct.IsReady.ShouldBeTrue();
+
+		// Test IServerHost.Exit method and ServerHost.Exiting event.
 		host.ExitCode.ShouldBeNull();
-		proxy.Exit(0);
+		bool allowExit = false;
+		host.Exiting += (s, e) => e.Cancel = !allowExit;
+		proxy.Exit(0).ShouldBeFalse();
+		host.ExitCode.ShouldBeNull();
+		direct.IsReady.ShouldBeTrue();
+		allowExit = true;
+		proxy.Exit(0).ShouldBeTrue();
 		host.ExitCode.ShouldBe(0);
 		host.WaitForExit();
 

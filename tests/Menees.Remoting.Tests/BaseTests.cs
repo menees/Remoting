@@ -4,6 +4,7 @@
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -19,6 +20,8 @@ public class BaseTests
 	#endregion
 
 	#region Public Properties
+
+	public static bool IsDotNetFramework { get; } = RuntimeInformation.FrameworkDescription.Contains("Framework");
 
 	public ILoggerFactory LoggerFactory => this.logManager?.LoggerFactory ?? NullLoggerFactory.Instance;
 

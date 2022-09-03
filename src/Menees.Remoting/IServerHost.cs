@@ -16,8 +16,10 @@ public interface IServerHost
 	bool IsReady { get; }
 
 	/// <summary>
-	/// Tells the host to begin the shutdown process and to signal any associated <see cref="IServer"/> instances to stop.
+	/// Asks the host to begin the shutdown process and to signal any associated <see cref="IServer"/> instances to stop.
 	/// </summary>
 	/// <param name="exitCode">An optional exit code to pass to the host.</param>
-	void Exit(int? exitCode = null);
+	/// <returns>True if the shutdown process was begun. False if it was cancelled by a server-side event handler
+	/// (e.g., by <see cref="ServerHost.Exiting"/>).</returns>
+	bool Exit(int? exitCode = null);
 }

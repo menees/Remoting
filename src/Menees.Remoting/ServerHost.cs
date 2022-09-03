@@ -2,6 +2,7 @@
 
 #region Using Directives
 
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 #endregion
@@ -20,6 +21,15 @@ public sealed class ServerHost : IServerHost, IDisposable
 
 	#endregion
 
+	#region Public Events
+
+	/// <summary>
+	/// Raised when <see cref="IServerHost.Exit(int?)"/> is called to allow logging and/or cancellation.
+	/// </summary>
+	public event CancelEventHandler? Exiting;
+
+	#endregion
+
 	#region Public Properties
 
 	bool IServerHost.IsReady => !this.resetEvent.IsSet;
@@ -35,16 +45,36 @@ public sealed class ServerHost : IServerHost, IDisposable
 
 	/// <inheritdoc/>
 	/// <exception cref="ObjectDisposedException">If <see cref="Dispose()"/> has been called already.</exception>
-	/// <exception cref="InvalidOperationException">If <see cref="IServerHost.Exit"/> has been called already.</exception>
-	void IServerHost.Exit(int? exitCode)
+	/// <exception cref="InvalidOperationException">If <see cref="IServerHost.Exit"/> has started already.</exception>
+	bool IServerHost.Exit(int? exitCode)
 	{
 		this.EnsureReady();
-		this.ExitCode = exitCode;
 
-		// Give the caller a little time to receive our response and disconnect.
-		// Otherwise, this process could end too soon, and the client would get an ArgumentException
-		// like "Unable to read 4 byte message length from stream. Only 0 bytes were available.".
-		this.StartExiting();
+		CancelEventArgs should = new();
+		int? previousExitCode = this.ExitCode;
+		try
+		{
+			this.ExitCode = exitCode;
+			this.Exiting?.Invoke(this, should);
+		}
+		finally
+		{
+			if (should.Cancel)
+			{
+				this.ExitCode = previousExitCode;
+			}
+		}
+
+		bool exit = !should.Cancel;
+		if (exit)
+		{
+			// Give the caller a little time to receive our response and disconnect.
+			// Otherwise, this process could end too soon, and the client would get an ArgumentException
+			// like "Unable to read 4 byte message length from stream. Only 0 bytes were available.".
+			this.StartExiting();
+		}
+
+		return exit;
 	}
 
 	/// <inheritdoc/>
@@ -61,7 +91,7 @@ public sealed class ServerHost : IServerHost, IDisposable
 	/// <param name="server">A server instance.</param>
 	/// <exception cref="ArgumentNullException"><paramref name="server"/> is null.</exception>
 	/// <exception cref="ObjectDisposedException">If <see cref="Dispose()"/> has been called already.</exception>
-	/// <exception cref="InvalidOperationException">If <see cref="IServerHost.Exit"/> has been called already.</exception>
+	/// <exception cref="InvalidOperationException">If <see cref="IServerHost.Exit"/> has started already.</exception>
 	public void Add(IServer server)
 	{
 		if (server == null)
@@ -87,7 +117,7 @@ public sealed class ServerHost : IServerHost, IDisposable
 	}
 
 	/// <summary>
-	/// Waits for all added <see cref="IServer"/> instances to stop after <see cref="IServerHost.Exit"/> is called.
+	/// Waits for all added <see cref="IServer"/> instances to stop after <see cref="IServerHost.Exit"/> is started.
 	/// </summary>
 	public void WaitForExit() => this.resetEvent.Wait();
 
@@ -186,7 +216,7 @@ public sealed class ServerHost : IServerHost, IDisposable
 
 		if (this.isExiting)
 		{
-			throw new InvalidOperationException($"{callerMemberName} can't be called after {nameof(IServerHost.Exit)}.");
+			throw new InvalidOperationException($"{callerMemberName} can't be called after {nameof(IServerHost.Exit)} starts.");
 		}
 	}
 

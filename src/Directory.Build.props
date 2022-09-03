@@ -29,7 +29,7 @@
 
 		<!-- Make the assembly, file, and NuGet package versions the same. -->
 		<!-- https://docs.microsoft.com/en-us/nuget/concepts/package-versioning#pre-release-versions -->
-		<Version>0.4.0-alpha</Version>
+		<Version>0.5.0-beta</Version>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
