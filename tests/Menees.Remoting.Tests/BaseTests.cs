@@ -122,7 +122,7 @@ public class BaseTests
 		}
 		finally
 		{
-			TimeSpan exitWait = TimeSpan.FromSeconds(5);
+			TimeSpan exitWait = TimeSpan.FromSeconds(10);
 			WaitForExit(hostProcess, exitWait, ExpectedExitCode);
 		}
 	}

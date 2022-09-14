@@ -14,6 +14,30 @@ using Menees.Remoting.Security;
 [TestClass]
 public class RmiServerTests : BaseTests
 {
+	#region Private Interfaces
+
+	private interface IRoot
+	{
+		int GetRoot(int input);
+	}
+
+	private interface ILevel1A : IRoot
+	{
+		int GetLevel1A(int input);
+	}
+
+	private interface ILevel1B : IRoot
+	{
+		int GetLevel1B(int input);
+	}
+
+	private interface IDiamond : ILevel1A, ILevel1B
+	{
+		int GetDiamond(int input);
+	}
+
+	#endregion
+
 	#region Public Methods
 
 	[TestMethod]
@@ -143,6 +167,23 @@ public class RmiServerTests : BaseTests
 		}
 	}
 
+	[TestMethod]
+	public void InterfaceInheritance()
+	{
+		string serverPath = this.GenerateServerPath();
+		Diamond diamond = new();
+		using RmiServer<IDiamond> server = new(diamond, serverPath, loggerFactory: this.LoggerFactory);
+		server.ReportUnhandledException = WriteUnhandledServerException;
+		server.Start();
+
+		using RmiClient<IDiamond> client = new(serverPath, loggerFactory: this.LoggerFactory);
+		IDiamond proxy = client.CreateProxy();
+		proxy.GetRoot(10).ShouldBe(10);
+		proxy.GetLevel1A(10).ShouldBe(110);
+		proxy.GetLevel1B(10).ShouldBe(210);
+		proxy.GetDiamond(10).ShouldBe(1010);
+	}
+
 	#endregion
 
 	#region Private Methods
@@ -203,6 +244,21 @@ public class RmiServerTests : BaseTests
 				string actual = proxy.Combine(Prefix, item.ToString());
 				actual.ShouldBe(Prefix + item);
 			});
+	}
+
+	#endregion
+
+	#region Private Types
+
+	private sealed class Diamond : IDiamond
+	{
+		public int GetDiamond(int input) => input + 1000;
+
+		public int GetLevel1A(int input) => input + 100;
+
+		public int GetLevel1B(int input) => input + 200;
+
+		public int GetRoot(int input) => input;
 	}
 
 	#endregion

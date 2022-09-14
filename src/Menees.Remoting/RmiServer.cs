@@ -19,8 +19,7 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 {
 	#region Private Data Members
 
-	private static readonly Dictionary<string, MethodInfo> MethodSignatureCache =
-		typeof(TServiceInterface).GetMethods().ToDictionary(method => GetMethodSignature(method));
+	private static readonly Lazy<Dictionary<string, MethodInfo>> MethodSignatureCache = new(CreateMethodSignatureDictionary);
 
 	private readonly PipeServer pipe;
 	private readonly CancellationToken cancellationToken;
@@ -134,6 +133,38 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 
 	#region Private Methods
 
+	private static Dictionary<string, MethodInfo> CreateMethodSignatureDictionary()
+	{
+		List<(string Signature, MethodInfo Method)> items = new();
+
+		void AddMethods(Type interfaceType)
+		{
+			items.AddRange(interfaceType.GetMethods().Select(method => (GetMethodSignature(method), method)));
+
+			foreach (Type implementedType in interfaceType.GetInterfaces())
+			{
+				AddMethods(implementedType);
+			}
+		}
+
+		// Calling GetMethods() on an interface type only gets its declared methods. Even BindingFlags don't help
+		// because a "derived" interface still has "object" as its base and any "inherited" interface is really just an
+		// "implements" relationship and not an "inherits" relationship. So, we have to recursively find all "inherited"
+		// interfaces and flatten them out ourselves.
+		// https://stackoverflow.com/questions/3395174/c-sharp-interface-inheritance/3395327#3395327
+		AddMethods(typeof(TServiceInterface));
+
+		// Take the first MethodInfo instance for each signature because interfaces can have a diamond shaped
+		// "inheritance" pattern. For example, suppose an interface "inherits" from two interfaces that are
+		// both IDisposable like this:
+		//     IStreamReader : IDisposable
+		//     IStreamWriter : IDisposable
+		//     IStreamReaderWriter : IStreamReader, IStreamWriter
+		Dictionary<string, MethodInfo> result = items.GroupBy(pair => pair.Signature)
+			.ToDictionary(pair => pair.Key, pair => pair.First().Method);
+		return result;
+	}
+
 	private async Task ProcessRequestAsync(Stream clientStream)
 	{
 		await ServerUtility.ProcessRequestAsync(
@@ -144,7 +175,7 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 			{
 				Response response;
 
-				if (!MethodSignatureCache.TryGetValue(request.MethodSignature ?? string.Empty, out MethodInfo? method))
+				if (!MethodSignatureCache.Value.TryGetValue(request.MethodSignature ?? string.Empty, out MethodInfo? method))
 				{
 					response = ServerUtility.CreateResponse(new TargetException(
 						$"A {typeof(TServiceInterface).FullName} method with signature '{request.MethodSignature}' was not found."));
