@@ -105,7 +105,7 @@ internal abstract class Message
 
 		if (totalCount != requiredCount)
 		{
-			throw new ArgumentException(
+			throw new EndOfStreamException(
 				$"Unable to read {requiredCount} byte {forWhat} from stream. Only {totalCount} bytes were available.");
 		}
 
@@ -154,7 +154,7 @@ internal abstract class Message
 		if (totalCount != requiredCount)
 		{
 			ThrowIfCancellationRequested();
-			throw new ArgumentException(
+			throw new EndOfStreamException(
 				$"Unable to read {requiredCount} byte {forWhat} from stream. Only {totalCount} bytes were available.");
 		}
 
