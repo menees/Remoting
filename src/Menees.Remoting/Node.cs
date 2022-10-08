@@ -19,7 +19,7 @@ public abstract class Node : IDisposable
 	private readonly string serverPath;
 
 	private bool disposed;
-	private Func<string, Type?> tryGetType = RequireGetType;
+	private Func<string, Type?> tryGetType;
 	private ISerializer? systemSerializer;
 	private ISerializer? userSerializer;
 	private Func<string, ILogger>? createLogger;
@@ -35,48 +35,9 @@ public abstract class Node : IDisposable
 	protected Node(NodeSettings settings)
 	{
 		this.serverPath = settings.ServerPath;
+		this.tryGetType = settings?.TryGetType ?? NodeSettings.RequireGetType;
 		this.userSerializer = settings?.Serializer;
 		this.createLogger = settings?.CreateLogger;
-	}
-
-	#endregion
-
-	#region Public Properties
-
-	/// <summary>
-	/// Allows customization of how an assembly-qualified type name (serialized from
-	/// <see cref="Type.AssemblyQualifiedName"/>) should be deserialized into a .NET
-	/// <see cref="Type"/>.
-	/// </summary>
-	/// <remarks>
-	/// A secure system needs to support a known list of legal/safe/valid types that it
-	/// can load dynamically. It shouldn't just trust and load an arbitrary assembly and
-	/// then load an arbitrary type out of it. Doing that can execute malicious code
-	/// in the current process (e.g., via the Type's static constructor or the assembly's
-	/// module initializer). So a security best practice is to validate every assembly-
-	/// qualified type name before you load the type.
-	/// <para/>
-	/// However, this is a case where security is at odds with convenience. The default for
-	/// this property just calls <see cref="Type.GetType(string, bool)"/> to try to load the type,
-	/// and it throws an exception if the type can't be loaded.
-	/// <para/>
-	/// https://github.com/dotnet/runtime/issues/31567#issuecomment-558335944
-	/// https://stackoverflow.com/a/66963611/1882616
-	/// https://github.com/dotnet/runtime/issues/43482#issue-722814247 (related Exception comment)
-	/// </remarks>
-	public Func<string, Type?> TryGetType
-	{
-		get => this.tryGetType;
-		set
-		{
-			if (this.tryGetType != value)
-			{
-				this.tryGetType = value ?? RequireGetType;
-
-				// On the next serialization, we need to create a new serializer instance using the new tryGetType lambda.
-				this.systemSerializer = null;
-			}
-		}
 	}
 
 	#endregion
@@ -151,13 +112,6 @@ public abstract class Node : IDisposable
 			this.disposed = true;
 		}
 	}
-
-	#endregion
-
-	#region Private Methods
-
-	private static Type? RequireGetType(string qualifiedTypeName)
-		=> Type.GetType(qualifiedTypeName, throwOnError: true);
 
 	#endregion
 

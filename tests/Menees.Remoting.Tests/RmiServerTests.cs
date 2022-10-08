@@ -44,13 +44,18 @@ public class RmiServerTests : BaseTests
 	public void CloneString()
 	{
 		string serverPath = this.GenerateServerPath();
-		string expected = Guid.NewGuid().ToString();
-		using RmiServer<ICloneable> server = new(expected, serverPath, loggerFactory: this.LoggerFactory);
+		ServerSettings settings = new(serverPath)
+		{
+			CreateLogger = this.LoggerFactory.CreateLogger,
 
-		// This is a super weak, insecure example since it just checks for the word "System".
-		server.TryGetType = typeName => typeName.Contains(nameof(System))
-			? Type.GetType(typeName, true)
-			: throw new ArgumentException("TryGetType disallowed " + typeName);
+			// This is a super weak, insecure example since it just checks for the word "System".
+			TryGetType = typeName => typeName.Contains(nameof(System))
+				? Type.GetType(typeName, true)
+				: throw new ArgumentException("TryGetType disallowed " + typeName),
+		};
+
+		string expected = Guid.NewGuid().ToString();
+		using RmiServer<ICloneable> server = new(expected, settings);
 
 		server.ReportUnhandledException = WriteUnhandledServerException;
 		server.Start();

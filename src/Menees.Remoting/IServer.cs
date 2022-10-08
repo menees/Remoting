@@ -22,11 +22,6 @@ public interface IServer : IDisposable
 	/// </summary>
 	Action<Exception>? ReportUnhandledException { get; set; }
 
-	/// <summary>
-	/// See <see cref="Node.TryGetType"/>.
-	/// </summary>
-	Func<string, Type?> TryGetType { get; set; }
-
 	#endregion
 
 	#region Public Methods
