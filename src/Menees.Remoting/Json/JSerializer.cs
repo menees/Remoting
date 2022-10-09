@@ -26,6 +26,9 @@ internal sealed class JSerializer : ISerializer
 
 			// Handle user vs. system serialized values.
 			new UserSerializedValueConverter(),
+
+			// Handle System.Collections.ObjectModel.ReadOnlyDictionary<TKey,TValue>.
+			new ReadOnlyDictionaryConverter(),
 		},
 
 		// Make sure ValueTuple serializes correctly since it uses public fields.

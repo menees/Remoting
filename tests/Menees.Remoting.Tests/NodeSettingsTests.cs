@@ -1,7 +1,9 @@
 ﻿namespace Menees.Remoting;
 
+using System.Collections.ObjectModel;
+
 [TestClass]
-public class NodeSettingsTests
+public class NodeSettingsTests : BaseTests
 {
 	[TestMethod]
 	public void RequireGetType()
@@ -50,5 +52,24 @@ public class NodeSettingsTests
 
 			return result;
 		}
+	}
+
+	[TestMethod]
+	public async Task ConvertReadOnlyDictionaryAsync()
+	{
+		string serverPath = this.GenerateServerPath();
+
+		using MessageServer<ReadOnlyDictionary<int, string>, ReadOnlyDictionary<int, string>> server = new(
+			async dictionary => await Task.FromResult(dictionary).ConfigureAwait(false),
+			serverPath,
+			maxListeners: 10,
+			loggerFactory: this.LoggerFactory);
+		server.Start();
+
+		using MessageClient<ReadOnlyDictionary<int, string>, ReadOnlyDictionary<int, string>> client = new(serverPath, loggerFactory: this.LoggerFactory);
+		Dictionary<int, string> plainDictionary = new() { [1] = "A", [2] = "B" };
+		ReadOnlyDictionary<int, string> readOnlyDictionary = new(plainDictionary);
+		ReadOnlyDictionary<int, string> result = await client.SendAsync(readOnlyDictionary).ConfigureAwait(false);
+		result.ShouldBe(readOnlyDictionary);
 	}
 }
