@@ -12,6 +12,15 @@ public class NodeSettingsTests : BaseTests
 		const string FrameworkStringTypeName = "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089";
 		TestVersions(typeof(string), CoreStringTypeName, FrameworkStringTypeName);
 
+		// On .NET Framework, we won't be able to load the System.Private.Uri assembly, and NodeSettings
+		// has no special knowledge of that assembly (like it does for System.Private.CoreLib).
+		if (!IsDotNetFramework)
+		{
+			const string CoreUriTypeName = "System.Uri, System.Private.Uri, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a";
+			const string FrameworkUriTypeName = "System.Uri, System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089";
+			TestVersions(typeof(Uri), CoreUriTypeName, FrameworkUriTypeName);
+		}
+
 		const string CoreDictionaryTypeName = "System.Collections.Generic.IReadOnlyDictionary`2[" +
 			"[System.String, System.Private.CoreLib, Version=6.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]," +
 			"[System.Object, System.Private.CoreLib, Version=6.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]" +
