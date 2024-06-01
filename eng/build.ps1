@@ -17,9 +17,7 @@ if ($build)
 {
     foreach ($configuration in $configurations)
     {
-        # Restore NuGet packages first
-        msbuild "$repoPath\Remoting.sln" /p:Configuration=$configuration /t:Restore /v:$msBuildVerbosity
-        msbuild "$repoPath\Remoting.sln" /p:Configuration=$configuration /v:$msBuildVerbosity
+        dotnet build "$repoPath\Remoting.sln" /p:Configuration=$configuration /v:$msBuildVerbosity
     }
 }
 
