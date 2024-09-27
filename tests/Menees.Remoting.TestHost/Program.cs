@@ -39,7 +39,7 @@ public static class Program
 
 		if (args.Length != RequiredArgCount)
 		{
-			exitCode = FataError(ExitCode.MissingArgs, $"Usage: {nameof(TestHost)} AssemblyPath TypeName ServerPathPrefix Max Min");
+			exitCode = FatalError(ExitCode.MissingArgs, $"Usage: {nameof(TestHost)} AssemblyPath TypeName ServerPathPrefix Max Min");
 		}
 		else
 		{
@@ -58,14 +58,14 @@ public static class Program
 
 				if (serviceType == null)
 				{
-					exitCode = FataError(ExitCode.MissingType, $"Unable to load type {typeName} from assembly {assemblyPath}.");
+					exitCode = FatalError(ExitCode.MissingType, $"Unable to load type {typeName} from assembly {assemblyPath}.");
 				}
 				else
 				{
 					Type? interfaceType = serviceType.GetInterfaces().FirstOrDefault();
 					if (interfaceType == null)
 					{
-						exitCode = FataError(ExitCode.MissingInterface, $"No interface found on type {serviceType}.");
+						exitCode = FatalError(ExitCode.MissingInterface, $"No interface found on type {serviceType}.");
 					}
 					else
 					{
@@ -104,7 +104,7 @@ public static class Program
 			}
 			catch (Exception ex)
 			{
-				exitCode = FataError(ExitCode.UnhandledException, $"Unhandled exception: {ex}");
+				exitCode = FatalError(ExitCode.UnhandledException, $"Unhandled exception: {ex}");
 			}
 		}
 
@@ -115,7 +115,7 @@ public static class Program
 
 	#region Private Methods
 
-	private static ExitCode FataError(ExitCode exitCode, string message)
+	private static ExitCode FatalError(ExitCode exitCode, string message)
 	{
 		Error.WriteLine(message);
 		Error.WriteLine($"Exit code: {exitCode}");
