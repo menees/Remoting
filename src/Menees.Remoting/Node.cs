@@ -2,10 +2,9 @@
 
 #region Using Directives
 
-using System.Reflection;
+using Menees.Remoting.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Menees.Remoting.Json;
 
 #endregion
 
@@ -17,9 +16,9 @@ public abstract class Node : IDisposable
 	#region Protected Data Members
 
 	private readonly string serverPath;
+	private readonly Func<string, Type?> tryGetType;
 
 	private bool disposed;
-	private Func<string, Type?> tryGetType;
 	private ISerializer? systemSerializer;
 	private ISerializer? userSerializer;
 	private Func<string, ILogger>? createLogger;

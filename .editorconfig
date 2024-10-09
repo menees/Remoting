@@ -44,6 +44,9 @@ csharp_style_prefer_extended_property_pattern = true:suggestion
 csharp_style_var_for_built_in_types = false:silent
 csharp_style_var_when_type_is_apparent = false:silent
 csharp_style_var_elsewhere = false:silent
+csharp_style_prefer_method_group_conversion = true:silent
+csharp_style_prefer_top_level_statements = false:silent
+csharp_style_prefer_primary_constructors = false:suggestion
 
 # Code files
 [*.{cs,vb}]
@@ -216,3 +219,4 @@ dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity:sil
 dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:silent
 dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:silent
 dotnet_style_parentheses_in_other_operators = never_if_unnecessary:silent
+dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion
