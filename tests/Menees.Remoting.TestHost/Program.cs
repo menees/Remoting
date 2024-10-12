@@ -3,6 +3,8 @@
 #region Using Directives
 
 using System.Reflection;
+using System.Runtime.InteropServices;
+using Microsoft.Win32;
 using static System.Console;
 
 #endregion
@@ -18,6 +20,7 @@ public static class Program
 		MissingType = 2,
 		MissingInterface = 3,
 		MissingArgs = 4,
+		CtrlC = 5,
 	}
 
 	#endregion
@@ -97,6 +100,7 @@ public static class Program
 						host.Add(echoMessageServer);
 						host.Add(hostServer);
 
+						using IDisposable? manualExitHandler = HandleManualExit(host);
 						host.WaitForExit();
 						exitCode = (ExitCode)(host.ExitCode ?? 0);
 					}
@@ -120,6 +124,21 @@ public static class Program
 		Error.WriteLine(message);
 		Error.WriteLine($"Exit code: {exitCode}");
 		return exitCode;
+	}
+
+	private static IDisposable? HandleManualExit(IServerHost host)
+	{
+		IDisposable? result;
+
+#if NETCOREAPP
+		result = PosixSignalRegistration.Create(
+			PosixSignal.SIGINT,
+			context => host.Exit((int)ExitCode.CtrlC));
+#else
+		result = null;
+#endif
+
+		return result;
 	}
 
 	#endregion
