@@ -124,6 +124,9 @@ public abstract class NodeSettings
 			// Fallback to the Type.GetType overload where we can pass a custom assembly resolver.
 			// This is important since a single type name can contain multiple assembly references
 			// (e.g., Dictionary<string, Uri> includes asm refs for Dictionary<>, string, and Uri).
+			//
+			// LONG-TERM-TODO: Use TypeName.TryParse once we target .NET 9+ (after Nov 2026). [Bill, 10/11/2024]
+			// https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-9/libraries#type-name-parsing
 			Assembly[]? assemblies = null;
 			result = Type.GetType(
 				typeName,
