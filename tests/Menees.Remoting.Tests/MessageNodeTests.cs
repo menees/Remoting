@@ -140,7 +140,7 @@ public class MessageNodeTests : BaseTests
 			ex.ShouldBeOfType<OperationCanceledException>();
 		}
 
-#if NETCOREAPP
+#if NET8_0_OR_GREATER
 		await serverCancellationSource.CancelAsync().ConfigureAwait(false);
 #else
 		serverCancellationSource.Cancel();
