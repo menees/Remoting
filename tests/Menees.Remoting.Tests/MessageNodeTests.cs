@@ -187,9 +187,11 @@ public class MessageNodeTests : BaseTests
 	[TestMethod]
 	public async Task SecurityVariationsAsync()
 	{
-		await TestAsync(1, PipeClientSecurity.CurrentUserOnly, null).ConfigureAwait(false);
-		await TestAsync(2, null, PipeServerSecurity.CurrentUserOnly).ConfigureAwait(false);
-		await TestAsync(3, PipeClientSecurity.CurrentUserOnly, PipeServerSecurity.CurrentUserOnly).ConfigureAwait(false);
+		int code = 0;
+		await TestAsync(++code, PipeClientSecurity.CurrentUserOnly, null).ConfigureAwait(false);
+		await TestAsync(++code, null, PipeServerSecurity.CurrentUserOnly).ConfigureAwait(false);
+		await TestAsync(++code, PipeClientSecurity.CurrentUserOnly, PipeServerSecurity.CurrentUserOnly).ConfigureAwait(false);
+		await TestAsync(++code, null, PipeServerSecurity.Everyone).ConfigureAwait(false);
 
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 		{
@@ -197,7 +199,7 @@ public class MessageNodeTests : BaseTests
 			{
 				// This empty PipeSecurity instance doesn't grant any user access to the pipe (even the current user).
 				PipeSecurity pipeSecurity = new();
-				await TestAsync(4, PipeClientSecurity.CurrentUserOnly, new PipeServerSecurity(pipeSecurity)).ConfigureAwait(false);
+				await TestAsync(++code, PipeClientSecurity.CurrentUserOnly, new PipeServerSecurity(pipeSecurity)).ConfigureAwait(false);
 				Assert.Fail("Client should not have access to connect to server.");
 			}
 			catch (UnauthorizedAccessException ex)

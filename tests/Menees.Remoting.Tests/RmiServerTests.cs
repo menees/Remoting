@@ -154,6 +154,7 @@ public class RmiServerTests : BaseTests
 		this.TestClient(1, 1, ClientCount, PipeClientSecurity.CurrentUserOnly);
 		this.TestClient(1, 1, ClientCount, serverSecurity: PipeServerSecurity.CurrentUserOnly);
 		this.TestClient(1, 1, ClientCount, PipeClientSecurity.CurrentUserOnly, PipeServerSecurity.CurrentUserOnly);
+		this.TestClient(1, 1, ClientCount, serverSecurity: PipeServerSecurity.Everyone);
 
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 		{
