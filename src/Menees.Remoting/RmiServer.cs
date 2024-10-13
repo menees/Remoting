@@ -135,7 +135,7 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 
 	private static Dictionary<string, MethodInfo> CreateMethodSignatureDictionary()
 	{
-		List<(string Signature, MethodInfo Method)> items = new();
+		List<(string Signature, MethodInfo Method)> items = [];
 
 		void AddMethods(Type interfaceType)
 		{

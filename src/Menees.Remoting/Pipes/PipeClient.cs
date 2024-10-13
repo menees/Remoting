@@ -13,7 +13,7 @@ internal sealed class PipeClient : PipeNode
 	#region Private Data Members
 
 #pragma warning disable SA1310 // Field names should not contain underscore. Named like WinError.h constant.
-	private const int ERROR_SEM_TIMEOUT = unchecked((int)0x80070079);
+	private const int ERROR_SEM_TIMEOUT = unchecked((int)0x80_07_00_79);
 #pragma warning restore SA1310 // Field names should not contain underscore
 
 	private readonly PipeClientSecurity? security;

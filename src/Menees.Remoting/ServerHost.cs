@@ -15,7 +15,7 @@ public sealed class ServerHost : IServerHost, IDisposable
 	#region Private Data Members
 
 	private readonly ManualResetEventSlim resetEvent = new(false);
-	private readonly HashSet<IServer> servers = new();
+	private readonly HashSet<IServer> servers = [];
 	private bool isDisposed;
 	private bool isExiting;
 

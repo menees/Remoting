@@ -16,7 +16,7 @@ public class RmiClientTests : BaseTests
 		using RmiClient<IHasher> client = new(ServerPath);
 		IHasher proxy = client.CreateProxy();
 
-		proxy.Hash(new byte[] { 1, 2, 3, 4 }).Length.ShouldBe(20);
+		proxy.Hash([1, 2, 3, 4]).Length.ShouldBe(20);
 		proxy.Hash("Testing").ShouldBe("0820b32b206b7352858e8903a838ed14319acdfd");
 	}
 

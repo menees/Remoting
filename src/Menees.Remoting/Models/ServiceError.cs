@@ -74,10 +74,10 @@ internal sealed class ServiceError
 		// Try to throw a new exception of the requested type. The new exception's StackTrace will be from the client,
 		// but its message, data type, and inner exception will match the server's exception info.
 		Exception result;
-		ConstructorInfo? constructor = this.ExceptionType.GetConstructor(new[] { typeof(string), typeof(Exception) });
+		ConstructorInfo? constructor = this.ExceptionType.GetConstructor([typeof(string), typeof(Exception)]);
 		if (constructor != null)
 		{
-			result = (Exception)constructor.Invoke(new object?[] { this.Message, innerException });
+			result = (Exception)constructor.Invoke([this.Message, innerException]);
 		}
 		else
 		{

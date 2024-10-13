@@ -11,7 +11,7 @@ internal sealed class PipeServer : PipeNode
 {
 	#region Private Data Members
 
-	private readonly HashSet<PipeServerListener> listeners = new();
+	private readonly HashSet<PipeServerListener> listeners = [];
 	private readonly int minListeners;
 	private readonly int maxListeners;
 	private readonly IServer server;

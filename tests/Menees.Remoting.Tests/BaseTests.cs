@@ -149,12 +149,12 @@ public class BaseTests
 		Widget paper = testerProxy.CreateWidget("Paper", 0.01m, 85, 110);
 		paper.Name.ShouldBe("Paper");
 		paper.Cost.ShouldBe(0.01m);
-		paper.Dimensions.ShouldBe(new[] { 85, 110 });
+		paper.Dimensions.ShouldBe([85, 110]);
 
 		paper = testerProxy.UpdateWidget(paper, "Fancy Paper", 0.02m, null);
 		paper.Name.ShouldBe("Fancy Paper");
 		paper.Cost.ShouldBe(0.02m);
-		paper.Dimensions.ShouldBe(new[] { 85, 110 });
+		paper.Dimensions.ShouldBe([85, 110]);
 	}
 
 	private protected static void WriteUnhandledServerException(Exception ex)
@@ -168,12 +168,14 @@ public class BaseTests
 	{
 		string hostExeLocation = hostProgram.Assembly.Location;
 
-		startInfo = new();
-		startInfo.CreateNoWindow = true;
-		startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-		startInfo.ErrorDialog = false;
+		startInfo = new()
+		{
+			CreateNoWindow = true,
+			WindowStyle = ProcessWindowStyle.Hidden,
+			ErrorDialog = false,
+		};
 
-		arguments = new();
+		arguments = [];
 		if (string.Equals(Path.GetExtension(hostExeLocation), ".exe", StringComparison.OrdinalIgnoreCase))
 		{
 			startInfo.FileName = Path.GetFileName(hostExeLocation);

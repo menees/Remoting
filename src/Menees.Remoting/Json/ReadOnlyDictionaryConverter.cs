@@ -96,7 +96,7 @@ internal sealed class ReadOnlyDictionaryConverter : JsonConverterFactory
 					typeToConvert,
 					BindingFlags.Instance | BindingFlags.Public,
 					binder: null,
-					args: new object[] { dictionary },
+					args: [dictionary],
 					culture: null);
 			}
 

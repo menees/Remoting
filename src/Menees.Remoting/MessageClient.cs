@@ -93,7 +93,7 @@ public sealed class MessageClient<TIn, TOut> : MessageNode<TIn, TOut>
 	{
 		Request request = new()
 		{
-			Arguments = new() { new UserSerializedValue(typeof(TIn), message, this.UserSerializer) },
+			Arguments = [new UserSerializedValue(typeof(TIn), message, this.UserSerializer)],
 		};
 
 		Response? response = null;

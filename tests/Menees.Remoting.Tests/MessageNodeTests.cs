@@ -24,7 +24,7 @@ public class MessageNodeTests : BaseTests
 		server.Start();
 
 		using MessageClient<byte[], string> client = new(ServerPath);
-		string response = await client.SendAsync(new byte[] { 1, 2, 3, 4 }).ConfigureAwait(false);
+		string response = await client.SendAsync([1, 2, 3, 4]).ConfigureAwait(false);
 		response.ShouldBe("AQIDBA==");
 	}
 
