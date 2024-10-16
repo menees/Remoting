@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -33,6 +34,7 @@ internal sealed class ProcessManager
 			CreateNoWindow = true,
 			WindowStyle = ProcessWindowStyle.Hidden,
 			ErrorDialog = false,
+			UseShellExecute = false,
 		};
 
 		if (string.Equals(Path.GetExtension(hostExeLocation), ".exe", StringComparison.OrdinalIgnoreCase))
@@ -41,7 +43,7 @@ internal sealed class ProcessManager
 		}
 		else
 		{
-			this.StartInfo.FileName = OperatingSystem.IsWindows()
+			this.StartInfo.FileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
 				? Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\dotnet\dotnet.exe")
 				: "dotnet";
 			this.arguments.Add(hostExeLocation);
