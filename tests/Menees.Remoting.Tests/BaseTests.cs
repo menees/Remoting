@@ -54,18 +54,15 @@ public class BaseTests
 			new ParallelOptions { MaxDegreeOfParallelism = Math.Min(clientCount, 8 * Environment.ProcessorCount) },
 			item =>
 			{
-				InitializeProcessStartInfo(typeof(TestClient.Program), out ProcessStartInfo startInfo, out List<object> arguments);
-				arguments.Add(scenario);
-				arguments.Add(serverPathPrefix);
-				arguments.Add(timeout);
-				arguments.Add(iterations);
-				FinalizeProcessStartInfo(startInfo, arguments);
+				ProcessManager processManager = new(typeof(TestClient.Program));
+				processManager.Add(scenario);
+				processManager.Add(serverPathPrefix);
+				processManager.Add(timeout);
+				processManager.Add(iterations);
 
-				using Process clientProcess = new();
-				clientProcess.StartInfo = startInfo;
-				clientProcess.Start().ShouldBeTrue();
+				using Process clientProcess = processManager.Start();
 				TimeSpan exitWait = TimeSpan.FromSeconds(30);
-				WaitForExit(clientProcess, exitWait, 0);
+				processManager.WaitForExit(clientProcess, exitWait, 0);
 			});
 
 		return Task.CompletedTask;
@@ -92,19 +89,17 @@ public class BaseTests
 		int minListeners = 1,
 		Type? rmiServiceType = null)
 	{
-		InitializeProcessStartInfo(typeof(TestHost.Program), out ProcessStartInfo startInfo, out List<object> arguments);
+		ProcessManager processManager = new(typeof(TestHost.Program));
 		rmiServiceType ??= typeof(Tester);
-		arguments.Add(rmiServiceType.Assembly.Location);
-		arguments.Add(rmiServiceType.FullName!);
-		arguments.Add(serverPathPrefix);
-		arguments.Add(maxListeners);
-		arguments.Add(minListeners);
-		FinalizeProcessStartInfo(startInfo, arguments);
+		processManager.Add(rmiServiceType.Assembly.Location);
+		processManager.Add(rmiServiceType.FullName!);
+		processManager.Add(serverPathPrefix);
+		processManager.Add(maxListeners);
+		processManager.Add(minListeners);
 
-		const int ExpectedExitCode = 12345;
-		using Process hostProcess = new();
-		hostProcess.StartInfo = startInfo;
-		hostProcess.Start().ShouldBeTrue();
+		// Note: On Linux, exit codes must be in byte's range not int's! https://stackoverflow.com/a/51820986/1882616
+		const int ExpectedExitCode = 123;
+		using Process hostProcess = processManager.Start();
 		try
 		{
 			Thread.Sleep(2000);
@@ -123,7 +118,7 @@ public class BaseTests
 		finally
 		{
 			TimeSpan exitWait = TimeSpan.FromSeconds(10);
-			WaitForExit(hostProcess, exitWait, ExpectedExitCode);
+			processManager.WaitForExit(hostProcess, exitWait, ExpectedExitCode);
 		}
 	}
 
@@ -159,52 +154,6 @@ public class BaseTests
 
 	private protected static void WriteUnhandledServerException(Exception ex)
 		=> Console.WriteLine("ERROR: Unhandled server exception: " + ex);
-
-	#endregion
-
-	#region Private Methods
-
-	private static void InitializeProcessStartInfo(Type hostProgram, out ProcessStartInfo startInfo, out List<object> arguments)
-	{
-		string hostExeLocation = hostProgram.Assembly.Location;
-
-		startInfo = new()
-		{
-			CreateNoWindow = true,
-			WindowStyle = ProcessWindowStyle.Hidden,
-			ErrorDialog = false,
-		};
-
-		arguments = [];
-		if (string.Equals(Path.GetExtension(hostExeLocation), ".exe", StringComparison.OrdinalIgnoreCase))
-		{
-			startInfo.FileName = Path.GetFileName(hostExeLocation);
-		}
-		else
-		{
-			startInfo.FileName = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\dotnet\dotnet.exe");
-			arguments.Add(hostExeLocation);
-		}
-	}
-
-	private static void FinalizeProcessStartInfo(ProcessStartInfo startInfo, List<object> arguments)
-	{
-		startInfo.Arguments = string.Join(" ", arguments.Select(arg => $"\"{arg}\""));
-	}
-
-	private static void WaitForExit(Process process, TimeSpan exitWait, int expectedExitCode, [CallerMemberName] string? caller = null)
-	{
-		if (process.WaitForExit((int)exitWait.TotalMilliseconds))
-		{
-			process.WaitForExit(); // Let console finish flushing.
-			process.ExitCode.ShouldBe(expectedExitCode);
-		}
-		else
-		{
-			process.Kill();
-			Assert.Fail($"{caller} process didn't exit within wait time of {exitWait}.");
-		}
-	}
 
 	#endregion
 }

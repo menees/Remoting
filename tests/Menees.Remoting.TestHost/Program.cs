@@ -31,6 +31,12 @@ public static class Program
 	{
 		ExitCode exitCode = ExitCode.Default;
 
+		WriteLine($"Arg count: {args.Length}");
+		foreach (string arg in args)
+		{
+			WriteLine(arg);
+		}
+
 		const int RequiredArgCount = 5;
 
 		// Sometimes a lighter weight option is to use SysInternals PipeList utility from PowerShell
@@ -112,6 +118,7 @@ public static class Program
 			}
 		}
 
+		WriteLine($"Exit code: {exitCode}");
 		return (int)exitCode;
 	}
 
