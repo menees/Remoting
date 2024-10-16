@@ -80,7 +80,7 @@ class ClientProxy<TServiceInterface> : DispatchProxy
 		}
 
 		// This requires a synchronous call from the client to avoid deadlocks since DispatchProxy.Invoke is synchronous.
-		object? result = this.client.Invoke(targetMethod, args ?? Array.Empty<object?>());
+		object? result = this.client.Invoke(targetMethod, args ?? []);
 		return result;
 	}
 

@@ -6,5 +6,5 @@ public sealed class Widget
 
 	public decimal Cost { get; set; }
 
-	public int[] Dimensions { get; set; } = Array.Empty<int>();
+	public int[] Dimensions { get; set; } = [];
 }
