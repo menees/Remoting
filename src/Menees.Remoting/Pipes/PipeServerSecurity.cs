@@ -123,7 +123,9 @@ public sealed class PipeServerSecurity : ServerSecurity
 				// https://stackoverflow.com/a/57067615/1882616 - /tmp/CoreFxPipe_ prefix if not rooted
 				// https://stackoverflow.com/a/77908370/1882616 - Allow writing to a named pipe by another user
 				string rootedPipeName = Path.IsPathRooted(pipeName) ? pipeName : $"/tmp/CoreFxPipe_{pipeName}";
-				File.SetUnixFileMode(rootedPipeName, UnixFileMode.OtherRead | UnixFileMode.OtherWrite);
+				UnixFileMode unixFileMode = File.GetUnixFileMode(rootedPipeName);
+				unixFileMode |= UnixFileMode.OtherRead | UnixFileMode.OtherWrite;
+				File.SetUnixFileMode(rootedPipeName, unixFileMode);
 			}
 		}
 		else
