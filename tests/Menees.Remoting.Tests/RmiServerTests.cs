@@ -67,6 +67,13 @@ public class RmiServerTests : BaseTests
 	}
 
 	[TestMethod]
+	public void OneShot()
+	{
+		// Run 1 client with a single server listener.
+		this.TestClient(1, 1, 1);
+	}
+
+	[TestMethod]
 	public void SingleServer()
 	{
 		// Run 20 clients that have to wait on a single server listener.
@@ -222,7 +229,7 @@ public class RmiServerTests : BaseTests
 
 		// Make sure all the servers have completely exited in case another TestClient
 		// starts up immediately using the same serverPath. We don't want a new client
-		// to race in an grab an old server listener just as its shutting down.
+		// to race in and grab an old server listener just as its shutting down.
 		((IServerHost)host).Exit();
 		host.WaitForExit();
 	}
@@ -230,9 +237,11 @@ public class RmiServerTests : BaseTests
 	private void TestClient(int clientCount, string serverPath, ClientSecurity? clientSecurity = null)
 	{
 		TimeSpan timeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : ClientSettings.DefaultConnectTimeout;
+		ParallelOptions parallelOptions = new() { MaxDegreeOfParallelism = Math.Min(clientCount, 8 * Environment.ProcessorCount) };
+		int[] source = [.. Enumerable.Range(1, clientCount)];
 		Parallel.ForEach(
-			Enumerable.Range(1, clientCount),
-			new ParallelOptions { MaxDegreeOfParallelism = Math.Min(clientCount, 8 * Environment.ProcessorCount) },
+			source,
+			parallelOptions,
 			item =>
 			{
 				ClientSettings clientSettings = new(serverPath)
@@ -242,6 +251,7 @@ public class RmiServerTests : BaseTests
 					Security = clientSecurity,
 				};
 
+				Debug.WriteLine($"Testing client {item}");
 				using RmiClient<ITester> client = new(clientSettings);
 				ITester proxy = client.CreateProxy();
 				TestProxy(proxy, item, isSingleClient: clientCount == 1);

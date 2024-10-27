@@ -105,10 +105,7 @@ public sealed class MessageServer<TIn, TOut> : MessageNode<TIn, TOut>, IServer
 	public MessageServer(Func<TIn, CancellationToken, Task<TOut>> requestHandler, ServerSettings settings)
 		: base(settings)
 	{
-		if (settings == null)
-		{
-			throw new ArgumentNullException(nameof(settings));
-		}
+		ArgumentNullException.ThrowIfNull(settings);
 
 		this.requestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
 

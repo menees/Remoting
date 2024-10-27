@@ -117,6 +117,7 @@ public abstract class Node : IDisposable
 	#region Private Types
 
 	private sealed class ScopedLogger<TScope> : ILogger
+		where TScope : notnull
 	{
 		#region Private Data Members
 
@@ -137,7 +138,9 @@ public abstract class Node : IDisposable
 
 		#region Public Methods
 
-		public IDisposable BeginScope<TState>(TState state) => this.logger.BeginScope(state);
+		public IDisposable? BeginScope<TState>(TState state)
+			where TState : notnull
+			=> this.logger.BeginScope(state);
 
 		public bool IsEnabled(LogLevel logLevel) => this.logger.IsEnabled(logLevel);
 
@@ -150,7 +153,7 @@ public abstract class Node : IDisposable
 			// call context wrapped around one or more local ILogger.Log calls with no intervening Task.Runs or awaits.
 			// To avoid having to do BeginScope around all our Log calls, it's easier to make this wrapper class that does it.
 			// https://stackoverflow.com/questions/63851259/since-iloggert-is-a-singleton-how-different-threads-can-use-beginscope-with#comment128022925_63852241
-			using IDisposable logScope = this.BeginScope(this.scope);
+			using IDisposable? logScope = this.BeginScope(this.scope);
 			this.logger.Log(logLevel, eventId, state, exception, formatter);
 		}
 

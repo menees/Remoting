@@ -51,10 +51,7 @@ public sealed class MessageClient<TIn, TOut> : MessageNode<TIn, TOut>
 	public MessageClient(ClientSettings settings)
 		: base(settings)
 	{
-		if (settings == null)
-		{
-			throw new ArgumentNullException(nameof(settings));
-		}
+		ArgumentNullException.ThrowIfNull(settings);
 
 		this.ConnectTimeout = settings.ConnectTimeout;
 		this.pipe = new(settings.ServerPath, settings.ServerHost, this, (PipeClientSecurity?)settings.Security);

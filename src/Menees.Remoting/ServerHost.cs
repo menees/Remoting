@@ -94,10 +94,7 @@ public sealed class ServerHost : IServerHost, IDisposable
 	/// <exception cref="InvalidOperationException">If <see cref="IServerHost.Exit"/> has started already.</exception>
 	public void Add(IServer server)
 	{
-		if (server == null)
-		{
-			throw new ArgumentNullException(nameof(server));
-		}
+		ArgumentNullException.ThrowIfNull(server);
 
 		this.EnsureReady();
 
@@ -209,10 +206,7 @@ public sealed class ServerHost : IServerHost, IDisposable
 
 	private void EnsureReady([CallerMemberName] string? callerMemberName = null)
 	{
-		if (this.isDisposed)
-		{
-			throw new ObjectDisposedException(nameof(ServerHost));
-		}
+		ObjectDisposedException.ThrowIf(this.isDisposed, this);
 
 		if (this.isExiting)
 		{

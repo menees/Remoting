@@ -11,7 +11,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 #endregion
 
 [TestClass]
+#pragma warning disable MSTEST0016 // Test class should have test method. This is used as a base class with init and cleanup.
 public class BaseTests
+#pragma warning restore MSTEST0016 // Test class should have test method
 {
 	#region Private Data Members
 
@@ -70,10 +72,7 @@ public class BaseTests
 
 	protected string GenerateServerPath([CallerMemberName] string? callerMemberName = null)
 	{
-		if (callerMemberName == null)
-		{
-			throw new ArgumentNullException(nameof(callerMemberName));
-		}
+		ArgumentNullException.ThrowIfNull(callerMemberName);
 
 		string result = $"{this.GetType().FullName}.{callerMemberName}";
 		return result;

@@ -74,10 +74,7 @@ class ClientProxy<TServiceInterface> : DispatchProxy
 			throw new InvalidOperationException("Client proxy was not initialized.");
 		}
 
-		if (targetMethod == null)
-		{
-			throw new ArgumentNullException(nameof(targetMethod));
-		}
+		ArgumentNullException.ThrowIfNull(targetMethod);
 
 		// This requires a synchronous call from the client to avoid deadlocks since DispatchProxy.Invoke is synchronous.
 		object? result = this.client.Invoke(targetMethod, args ?? []);

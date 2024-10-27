@@ -63,10 +63,7 @@ public sealed class RmiServer<TServiceInterface> : RmiNode<TServiceInterface>, I
 	public RmiServer(TServiceInterface serviceInstance, ServerSettings settings)
 		: base(settings)
 	{
-		if (settings == null)
-		{
-			throw new ArgumentNullException(nameof(settings));
-		}
+		ArgumentNullException.ThrowIfNull(settings);
 
 		this.serviceInstance = serviceInstance ?? throw new ArgumentNullException(nameof(serviceInstance));
 
