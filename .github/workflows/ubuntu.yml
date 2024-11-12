@@ -26,13 +26,16 @@ jobs:
         dotnet-version: 8.0.x
 
     - name: Build everything
+      shell: pwsh
       run: |
         & .\eng\build.ps1 -build $true
 
     - name: Run unit tests
+      shell: pwsh
       run: |
         & .\eng\build.ps1 -build $false -test $true
 
     - name: Test artifact publishing
+      shell: pwsh
       run: |
         & .\eng\build.ps1 -build $false -publish $true
