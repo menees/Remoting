@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFrameworks>$(MeneesTargetNetCoreBase);$(MeneesTargetNetFramework)</TargetFrameworks>
+		<TargetFramework>$(MeneesTargetNetCoreBase)</TargetFramework>
 		<IsUnitTestProject>false</IsUnitTestProject>
 	</PropertyGroup>
 

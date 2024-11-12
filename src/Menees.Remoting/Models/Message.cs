@@ -51,10 +51,6 @@ internal abstract class Message
 		byte[] messageLength = BitConverter.GetBytes(message.Length);
 		CheckEndianOrder(messageLength);
 
-		// In .NET Framework the stream.ReadAsync implementation ignores cancellationToken.
-		// This is a workaround. https://stackoverflow.com/a/12893018/1882616
-		using CancellationTokenRegistration registration = cancellationToken.Register(stream.Close);
-
 		// Check cancellation before and after each operation so we don't get an ObjectDisposedException
 		// trying to use the stream after we closed it due to the cancellation token registration.
 		cancellationToken.ThrowIfCancellationRequested();
@@ -116,12 +112,9 @@ internal abstract class Message
 	{
 		byte[] result = new byte[requiredCount];
 
-		// In .NET Framework the stream.ReadAsync implementation ignores cancellationToken.
-		// This is a workaround. https://stackoverflow.com/a/12893018/1882616
-		// .NET 7 adds full support for stream and pipe cancellation.
+		// .NET 7 added full support for stream and pipe cancellation.
 		// https://devblogs.microsoft.com/dotnet/performance_improvements_in_net_7/#file-i-o
-		using CancellationTokenRegistration registration = cancellationToken.Register(stream.Close);
-
+		//
 		// We'll check cancellation before and after each operation so we don't get an ObjectDisposedException
 		// trying to use the stream after we closed it due to the cancellation token registration.
 		void ThrowIfCancellationRequested()

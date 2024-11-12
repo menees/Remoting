@@ -12,22 +12,9 @@ using System.Reflection;
 /// </summary>
 /// <remarks>
 /// DispatchProxy.Create requires this type to be un-sealed.
-/// <para/>
-/// It's also required to be public for .NET Framework since we can't reference v6.0.0 of DispatchProxy containing fix 30917.
-/// https://github.com/dotnet/runtime/issues/30917
-/// https://github.com/dotnet/runtime/discussions/64726#discussioncomment-2113733
-/// <para/>
-/// Note: Since this library is strongly-named, it can't use the InternalsVisibleTo("ProxyBuilder") hack.
-/// https://github.com/dotnet/runtime/issues/25595#issuecomment-546330898
 /// </remarks>
 /// <typeparam name="TServiceInterface"></typeparam>
-#if NETFRAMEWORK
-[EditorBrowsable(EditorBrowsableState.Never)]
-public
-#else
-internal
-#endif
-class ClientProxy<TServiceInterface> : DispatchProxy
+internal class ClientProxy<TServiceInterface> : DispatchProxy
 	where TServiceInterface : class
 {
 	#region Private Data Members

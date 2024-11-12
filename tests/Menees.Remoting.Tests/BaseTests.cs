@@ -23,8 +23,6 @@ public class BaseTests
 
 	#region Public Properties
 
-	public static bool IsDotNetFramework { get; } = RuntimeInformation.FrameworkDescription.Contains("Framework");
-
 	public ILoggerFactory LoggerFactory => this.logManager?.LoggerFactory ?? NullLoggerFactory.Instance;
 
 	#endregion

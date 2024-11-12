@@ -61,7 +61,7 @@ public static class Program
 				int maxListeners = int.Parse(args[3]);
 				int minListeners = int.Parse(args[4]);
 
-				// .NET Framework supports Load(AssemblyName), but .NET Core requires LoadFrom().
+				// .NET Core requires LoadFrom() not Load(AssemblyName).
 				Assembly assembly = Assembly.LoadFrom(assemblyPath);
 				Type? serviceType = assembly.GetType(typeName);
 
@@ -135,16 +135,9 @@ public static class Program
 
 	private static IDisposable? HandleManualExit(IServerHost host)
 	{
-		IDisposable? result;
-
-#if NETCOREAPP
-		result = PosixSignalRegistration.Create(
+		IDisposable? result = PosixSignalRegistration.Create(
 			PosixSignal.SIGINT,
 			context => host.Exit((int)ExitCode.CtrlC));
-#else
-		result = null;
-#endif
-
 		return result;
 	}
 

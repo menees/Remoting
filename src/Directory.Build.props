@@ -14,12 +14,10 @@
 		<Copyright>Copyright © 2022-$(CurrentYear) Bill Menees</Copyright>
 		<Copyright Condition="$(CurrentYear) == '2022'">Copyright © 2022 Bill Menees</Copyright>
 
-		<!-- Note: We can't target .NET Standard 2.0 because DispatchProxy.Create isn't supported there (due to lack of Reflection.Emit). -->
 		<!-- https://docs.microsoft.com/en-us/dotnet/standard/frameworks -->
-		<MeneesTargetNetFramework></MeneesTargetNetFramework>
-		<!-- DOTNET_VERSION: Update .NET target version. -->
+		<!-- DOTNET_VERSION: Update .NET target version. Then update README.md. -->
 		<MeneesTargetNetCoreBase>net8.0</MeneesTargetNetCoreBase>
-		<TargetFrameworks>$(MeneesTargetNetCoreBase);$(MeneesTargetNetFramework)</TargetFrameworks>
+		<TargetFramework>$(MeneesTargetNetCoreBase)</TargetFramework>
 
 		<RepoSrcFolder>$(MSBuildThisFileDirectory)</RepoSrcFolder>
 		<AssemblyOriginatorKeyFile>$(RepoSrcFolder)Menees.Remoting.snk</AssemblyOriginatorKeyFile>

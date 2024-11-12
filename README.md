@@ -2,7 +2,7 @@
 
 # Remoting
 This repo provides a simple [RMI](https://en.wikipedia.org/wiki/Remote_method_invocation) and [IPC](https://en.wikipedia.org/wiki/Inter-process_communication)
-library for .NET Framework 4.8 and .NET 6.0+ applications. It's designed to help ease the migration from legacy [WCF](https://en.wikipedia.org/wiki/Windows_Communication_Foundation)
+library for .NET 8.0+ applications. It's designed to help ease the migration from legacy [WCF](https://en.wikipedia.org/wiki/Windows_Communication_Foundation)
 and [.NET Remoting](https://en.wikipedia.org/wiki/.NET_Remoting) when porting code from .NET Framework to modern .NET. However, this library doesn't try to do
 [all the things](https://knowyourmeme.com/memes/all-the-things) like WCF and .NET Remoting.
 
@@ -91,9 +91,3 @@ public async Task Base64ExampleAsync()
 
 For more usage examples see:
 * [MessageNodeTests](tests/Menees.Remoting.Tests/MessageNodeTests.cs)
-
-## No .NET Standard 2.0 Support
-This library doesn't target .NET Standard 2.0 because that standard doesn't support:
-* [DispatchProxy.Create](https://docs.microsoft.com/en-us/dotnet/api/system.reflection.dispatchproxy.create)
- due to lack of [Reflection.Emit](https://docs.microsoft.com/en-us/dotnet/api/system.reflection.emit) support in .NET Standard 2.0.
-* Named pipe security (see [#26869](https://github.com/dotnet/runtime/issues/26869) and [StackOverflow](https://stackoverflow.com/a/54896975/1882616)).

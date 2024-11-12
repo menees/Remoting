@@ -73,7 +73,7 @@ internal sealed class PipeClient : PipeNode
 		}
 		while (!connected && remainingWaitTime > TimeSpan.Zero);
 
-		this.EnsureConnected(connected, pipe);
+		EnsureConnected(connected, pipe);
 		this.Logger.LogTrace("Sending request.");
 		sendRequest(pipe);
 		this.Logger.LogTrace("Sent request.");
@@ -116,7 +116,7 @@ internal sealed class PipeClient : PipeNode
 		}
 		while (!connected && remainingWaitTime > TimeSpan.Zero);
 
-		this.EnsureConnected(connected, pipe);
+		EnsureConnected(connected, pipe);
 		this.Logger.LogTrace("Sending request async.");
 		await sendRequestAsync(pipe, cancellationToken).ConfigureAwait(false);
 		this.Logger.LogTrace("Sent request async.");
@@ -146,7 +146,7 @@ internal sealed class PipeClient : PipeNode
 		return new TimeoutException("Could not connect to the server due to a semaphore timeout.", ex);
 	}
 
-	private void EnsureConnected(bool connected, NamedPipeClientStream pipe)
+	private static void EnsureConnected(bool connected, NamedPipeClientStream pipe)
 	{
 		if (!connected)
 		{
@@ -154,13 +154,11 @@ internal sealed class PipeClient : PipeNode
 			throw new TimeoutException("Could not connect to the server within the specified timeout period.");
 		}
 
-		this.security?.CheckConnection(pipe);
 		pipe.ReadMode = Mode;
 	}
 
 	private NamedPipeClientStream CreatePipe(PipeOptions options)
 	{
-		// .NET 6 supports PipeOptions.CurrentUserOnly, but we have to simulate that in .NET Framework.
 		options |= this.security?.Options ?? PipeOptions.None;
 
 		this.Logger.LogTrace("Creating pipe client stream with options {Options}.", options);

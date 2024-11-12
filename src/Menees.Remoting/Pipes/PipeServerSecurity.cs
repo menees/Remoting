@@ -29,19 +29,16 @@ public sealed class PipeServerSecurity : ServerSecurity
 	/// </summary>
 	/// <param name="security">The pipe's access control and audit security.</param>
 	/// <exception cref="ArgumentNullException">Thrown if <paramref name="security"/> is null.</exception>
-#if NETCOREAPP
 	[SupportedOSPlatform("windows")]
-#endif
 	public PipeServerSecurity(PipeSecurity security)
 	{
 		this.scope = Scope.CustomSecurity;
 		this.Security = security ?? throw new ArgumentNullException(nameof(security));
-#if NETCOREAPP
+
 		if (!OperatingSystem.IsWindows())
 		{
 			throw new InvalidOperationException("Custom PipeSecurity is not supported on this OS platform.");
 		}
-#endif
 	}
 
 	private PipeServerSecurity(Scope scope)
@@ -99,14 +96,9 @@ public sealed class PipeServerSecurity : ServerSecurity
 	internal NamedPipeServerStream? CreatePipe(
 		string pipeName, PipeDirection direction, int maxListeners, PipeTransmissionMode mode, PipeOptions options)
 	{
-		NamedPipeServerStream? result = null;
-
 		options |= this.scope == Scope.CurrentUserOnly ? PipeClientSecurity.CurrentUserOnlyOption : PipeOptions.None;
 
-#if NETFRAMEWORK
-		PipeSecurity security = this.Security ?? this.CreateWindowsPipeSecurity();
-		result = new(pipeName, direction, maxListeners, mode, options, 0, 0, security);
-#else
+		NamedPipeServerStream? result;
 		if (OperatingSystem.IsWindows())
 		{
 			// NamedPipeServerStreamAcl.Create requires pipeSecurity == null with PipeOptions.CurrentUserOnly.
@@ -132,7 +124,6 @@ public sealed class PipeServerSecurity : ServerSecurity
 		{
 			throw new InvalidOperationException("Custom PipeSecurity is not supported on this OS platform.");
 		}
-#endif
 
 		return result;
 	}
@@ -141,9 +132,7 @@ public sealed class PipeServerSecurity : ServerSecurity
 
 	#region Private Methods
 
-#if NETCOREAPP
 	[SupportedOSPlatform("windows")]
-#endif
 	private PipeSecurity CreateWindowsPipeSecurity()
 	{
 		PipeSecurity result = new();

@@ -127,24 +127,12 @@ public class MessageNodeTests : BaseTests
 			await client.SendAsync("Test", clientCancellationSource.Token).ConfigureAwait(false);
 			Assert.Fail("Should not reach here.");
 		}
-		catch (TaskCanceledException ex)
-		{
-			// Sometimes .NET Framework throws this.
-			// Should.ThrowAsync doesn't work with TaskCanceledException.
-			// https://github.com/shouldly/shouldly/issues/831
-			ex.ShouldBeOfType<TaskCanceledException>();
-		}
 		catch (OperationCanceledException ex)
 		{
-			// Core throws this, and Framework sometimes does.
 			ex.ShouldBeOfType<OperationCanceledException>();
 		}
 
-#if NET8_0_OR_GREATER
 		await serverCancellationSource.CancelAsync().ConfigureAwait(false);
-#else
-		serverCancellationSource.Cancel();
-#endif
 	}
 
 	[TestMethod]

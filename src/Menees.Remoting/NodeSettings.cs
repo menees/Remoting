@@ -16,10 +16,6 @@ public abstract class NodeSettings
 {
 	#region Private Data Members
 
-	// I'm keeping this private for now (even though BaseTests duplicates it) because I may want to
-	// support other CLR scopes later (e.g., Framework, Core, Mono, Wasm, SQL CLR, Native).
-	private static readonly bool IsDotNetFramework = RuntimeInformation.FrameworkDescription.Contains("Framework");
-
 	private Func<string, Type?> tryGetType = RequireGetType;
 
 	#endregion
@@ -79,12 +75,10 @@ public abstract class NodeSettings
 	/// </summary>
 	/// <remarks>
 	/// This is useful for type translation and security. It's for translation if you're supporting
-	/// calls between different runtimes (e.g., Framework and "Core") or versions
-	/// (e.g., .NET 6.0 and 7.0). When mixing runtimes, many types will be in different
-	/// assemblies (e.g., int, string, Uri, IPAddress, Stack&lt;T>), so this handler needs
-	/// to deal with that for all your supported types. Even mixing versions of the same
-	/// runtime is complicated because strongly-named assemblies embed their version
-	/// in their AssemblyQualifiedName.
+	/// calls between different runtime versions (e.g., .NET x.0 and (x+1).0). When mixing versions,
+	/// some types may be in different assemblies, so this handler needs to deal with that for all
+	/// your supported types. Mixing versions is also complicated because strongly-named assemblies
+	/// embed their version in their AssemblyQualifiedName.
 	/// <para/>
 	/// A secure system needs to support a known list of legal/safe/valid types that it
 	/// can load dynamically. It shouldn't just trust and load an arbitrary assembly and
@@ -135,22 +129,13 @@ public abstract class NodeSettings
 					Assembly? assembly = null;
 					string simpleName = assemblyName.Name ?? string.Empty;
 
-					// Try to translate the simple built-in scalar types correctly across different runtimes.
-					if ((IsDotNetFramework && simpleName.Equals("System.Private.CoreLib", StringComparison.OrdinalIgnoreCase))
-						|| (!IsDotNetFramework && simpleName.Equals("MsCorLib", StringComparison.OrdinalIgnoreCase)))
-					{
-						assembly = typeof(string).Assembly;
-					}
-					else
-					{
-						// See if any assembly is already loaded with the same simple name.
-						// This ignores versions and strong naming, so it's convenient but insecure.
-						// We'll allow a lower version to match in case a .NET 7.0 client needs to
-						// call into a .NET 6.0 server.
-						// https://github.com/dotnet/fsharp/issues/3408#issuecomment-319519926
-						assemblies ??= AppDomain.CurrentDomain.GetAssemblies();
-						assembly = assemblies.FirstOrDefault(asm => asm.GetName().Name?.Equals(simpleName, StringComparison.OrdinalIgnoreCase) ?? false);
-					}
+					// See if any assembly is already loaded with the same simple name.
+					// This ignores versions and strong naming, so it's convenient but insecure.
+					// We'll allow a lower version to match in case a newer (higher) .NET (x+1).0
+					// client needs to call into an older (lower) .NET x.0 server.
+					// https://github.com/dotnet/fsharp/issues/3408#issuecomment-319519926
+					assemblies ??= AppDomain.CurrentDomain.GetAssemblies();
+					assembly = assemblies.FirstOrDefault(asm => asm.GetName().Name?.Equals(simpleName, StringComparison.OrdinalIgnoreCase) ?? false);
 
 					return assembly;
 				},
