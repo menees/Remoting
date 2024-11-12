@@ -53,7 +53,9 @@ internal sealed class PipeClient : PipeNode
 			{
 				int remainingTimeout = ConvertTimeout(remainingWaitTime);
 				int connectAttemptTimeout = remainingTimeout == Timeout.Infinite ? Timeout.Infinite : Math.Max(1, remainingTimeout);
+				this.Logger.LogTrace("Connecting to server with timeout {Timeout}.", connectAttemptTimeout);
 				pipe.Connect(connectAttemptTimeout);
+				this.Logger.LogTrace("Connected to server.");
 				connected = true;
 				break;
 			}
@@ -63,6 +65,7 @@ internal sealed class PipeClient : PipeNode
 			}
 			catch (IOException ex) when (ex.HResult == ERROR_SEM_TIMEOUT)
 			{
+				this.Logger.LogError(ex, "Semaphore timeout.");
 				throw NewSemaphoreTimeoutException(ex);
 			}
 
@@ -71,7 +74,9 @@ internal sealed class PipeClient : PipeNode
 		while (!connected && remainingWaitTime > TimeSpan.Zero);
 
 		this.EnsureConnected(connected, pipe);
+		this.Logger.LogTrace("Sending request.");
 		sendRequest(pipe);
+		this.Logger.LogTrace("Sent request.");
 	}
 
 	internal async Task SendRequestAsync(
@@ -91,7 +96,9 @@ internal sealed class PipeClient : PipeNode
 			{
 				int remainingTimeout = ConvertTimeout(remainingWaitTime);
 				int connectAttemptTimeout = remainingTimeout == Timeout.Infinite ? Timeout.Infinite : Math.Max(1, remainingTimeout);
+				this.Logger.LogTrace("Connecting to server async with timeout {Timeout}.", connectAttemptTimeout);
 				await pipe.ConnectAsync(connectAttemptTimeout, cancellationToken).ConfigureAwait(false);
+				this.Logger.LogTrace("Connected to server async.");
 				connected = true;
 				break;
 			}
@@ -101,6 +108,7 @@ internal sealed class PipeClient : PipeNode
 			}
 			catch (IOException ex) when (ex.HResult == ERROR_SEM_TIMEOUT)
 			{
+				this.Logger.LogError(ex, "Semaphore timeout async.");
 				throw NewSemaphoreTimeoutException(ex);
 			}
 
@@ -109,7 +117,9 @@ internal sealed class PipeClient : PipeNode
 		while (!connected && remainingWaitTime > TimeSpan.Zero);
 
 		this.EnsureConnected(connected, pipe);
+		this.Logger.LogTrace("Sending request async.");
 		await sendRequestAsync(pipe, cancellationToken).ConfigureAwait(false);
+		this.Logger.LogTrace("Sent request async.");
 	}
 
 	#endregion
@@ -152,6 +162,8 @@ internal sealed class PipeClient : PipeNode
 	{
 		// .NET 6 supports PipeOptions.CurrentUserOnly, but we have to simulate that in .NET Framework.
 		options |= this.security?.Options ?? PipeOptions.None;
+
+		this.Logger.LogTrace("Creating pipe client stream with options {Options}.", options);
 
 		// We only use a pipe for a single request. Remotely invoked interfaces shouldn't be chatty anyway.
 		// Single-use connections are easier to reason about and manage the state for. They also give us
