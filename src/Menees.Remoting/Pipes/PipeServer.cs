@@ -52,6 +52,18 @@ internal sealed class PipeServer : PipeNode
 			{
 				throw new ArgumentOutOfRangeException(nameof(maxListeners), $"{nameof(maxListeners)} must be >= {nameof(minListeners)}.");
 			}
+			else if (maxListeners == 1 && !OperatingSystem.IsWindows())
+			{
+				// LONG-TERM-TODO: Figure out why Linux tests require at least two listeners to handle multiple concurrent
+				// client requests without a SocketException: Connection reset by peer. [Bill, 11/11/2024]
+				// I've implemented this Server and ServerListener pair like Microsoft's and CodeProject's examples,
+				// but the Linux tests sometimes fail if we only allow one active listener. They don't fail with a timeout
+				// waiting on the next listener. They fail with a "Connection reset by peer", which seems buggy.
+				// Maybe it's an artifact of how NamedPipeServerStream is implemented with Unix Domain Sockets on Linux.
+				// https://github.com/microsoft/vs-servicehub/blob/main/src/Microsoft.ServiceHub.Framework/IpcServer.cs
+				// https://www.codeproject.com/Articles/1199046/A-Csharp-Named-Pipe-Library-That-Supports-Multiple
+				maxListeners = Math.Max(2, maxListeners);
+			}
 		}
 
 		this.minListeners = minListeners;
@@ -131,7 +143,7 @@ internal sealed class PipeServer : PipeNode
 							NamedPipeServerStream? pipe = null;
 							try
 							{
-								// Pass the actual maxListeners value to the new pipe since it's externally visible using SysInternals' PipeList.
+								// Pass the actual maxListeners value to the new pipe since it's externally visible on Windows using SysInternals' PipeList.
 								pipe = this.security?.CreatePipe(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous)
 									?? new(this.PipeName, Direction, this.maxListeners, Mode, PipeOptions.Asynchronous);
 							}
