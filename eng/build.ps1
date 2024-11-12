@@ -25,7 +25,7 @@ if ($test)
 {
     foreach ($configuration in $configurations)
     {
-		dotnet test "$repoPath\Remoting.sln"
+		dotnet test "$repoPath\Remoting.sln" /p:Configuration=$configuration
     }
 }
 
