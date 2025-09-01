@@ -140,7 +140,7 @@ public class RmiServerTests : BaseTests
 	{
 		await this.TestCrossProcessServerAsync(
 			this.GenerateServerPathPrefix(),
-			async prefix =>
+			async (prefix, cancellation) =>
 			{
 				this.TestClient(50, $"{prefix}{nameof(ITester)}");
 				await Task.CompletedTask.ConfigureAwait(false);

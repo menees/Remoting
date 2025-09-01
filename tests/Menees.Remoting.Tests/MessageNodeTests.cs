@@ -74,13 +74,13 @@ public class MessageNodeTests : BaseTests
 	{
 		await this.TestCrossProcessServerAsync(
 			this.GenerateServerPathPrefix(),
-			async prefix =>
+			async (prefix, cancellation) =>
 			{
 				using MessageClient<string, string> echoClient = new(prefix + "Echo", loggerFactory: this.LoggerFactory);
 				for (int i = 1; i <= 5; i++)
 				{
 					string input = $"Test {i}";
-					(await echoClient.SendAsync(input).ConfigureAwait(false)).ShouldBe(input);
+					(await echoClient.SendAsync(input, cancellation).ConfigureAwait(false)).ShouldBe(input);
 				}
 			},
 			2).ConfigureAwait(false);
@@ -91,7 +91,7 @@ public class MessageNodeTests : BaseTests
 	{
 		await this.TestCrossProcessServerAsync(
 			this.GenerateServerPathPrefix(),
-			async prefix => await TestCrossProcessClientAsync(4, prefix, Scenario.Message, 5).ConfigureAwait(false),
+			async (prefix, cancellation) => await TestCrossProcessClientAsync(4, prefix, Scenario.Message, 5, cancellation).ConfigureAwait(false),
 			2).ConfigureAwait(false);
 	}
 

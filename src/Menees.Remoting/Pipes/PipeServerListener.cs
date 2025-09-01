@@ -38,7 +38,7 @@ internal sealed class PipeServerListener : PipeNode
 
 	#region Public Methods
 
-	public async Task StartAsync()
+	public async Task StartAsync(CancellationToken cancellationToken = default)
 	{
 		this.State = ListenerState.WaitingForConnection;
 		try
@@ -46,7 +46,7 @@ internal sealed class PipeServerListener : PipeNode
 			// Stephen Toub says WaitForConnectionAsync will throw an exception (correctly)
 			// when the stream is closed on Windows and on Unix.
 			// https://github.com/dotnet/runtime/issues/24007#issuecomment-340810385
-			await this.pipe.WaitForConnectionAsync().ConfigureAwait(false);
+			await this.pipe.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
 			this.State = ListenerState.Connected;
 		}
 		catch (IOException ex)

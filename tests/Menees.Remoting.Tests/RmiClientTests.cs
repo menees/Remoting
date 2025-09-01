@@ -108,7 +108,7 @@ public class RmiClientTests : BaseTests
 	{
 		await this.TestCrossProcessServerAsync(
 			this.GenerateServerPathPrefix(),
-			async prefix => await TestCrossProcessClientAsync(10, prefix, Scenario.Calculator, 10).ConfigureAwait(false),
+			async (prefix, cancellation) => await TestCrossProcessClientAsync(10, prefix, Scenario.Calculator, 10, cancellation).ConfigureAwait(false),
 			8,
 			rmiServiceType: typeof(Calculator)).ConfigureAwait(false);
 	}

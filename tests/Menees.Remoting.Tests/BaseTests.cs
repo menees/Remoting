@@ -46,12 +46,17 @@ public class BaseTests
 
 	#region Protected Methods
 
-	protected static Task TestCrossProcessClientAsync(int clientCount, string serverPathPrefix, Scenario scenario, int iterations)
+	protected static Task TestCrossProcessClientAsync(
+		int clientCount,
+		string serverPathPrefix,
+		Scenario scenario,
+		int iterations,
+		CancellationToken cancellationToken = default)
 	{
 		TimeSpan timeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : ClientSettings.DefaultConnectTimeout;
 		Parallel.ForEach(
 			Enumerable.Range(1, clientCount),
-			new ParallelOptions { MaxDegreeOfParallelism = Math.Min(clientCount, 8 * Environment.ProcessorCount) },
+			new ParallelOptions { MaxDegreeOfParallelism = Math.Min(clientCount, 8 * Environment.ProcessorCount), CancellationToken = cancellationToken },
 			item =>
 			{
 				ProcessManager processManager = new(typeof(TestClient.Program));
@@ -81,10 +86,11 @@ public class BaseTests
 
 	protected async Task TestCrossProcessServerAsync(
 		string serverPathPrefix,
-		Func<string, Task> testClientAsync,
+		Func<string, CancellationToken, Task> testClientAsync,
 		int maxListeners,
 		int minListeners = 1,
-		Type? rmiServiceType = null)
+		Type? rmiServiceType = null,
+		CancellationToken cancellationToken = default)
 	{
 		ProcessManager processManager = new(typeof(TestHost.Program));
 		rmiServiceType ??= typeof(Tester);
@@ -108,7 +114,7 @@ public class BaseTests
 			IServerHost serverHost = hostClient.CreateProxy();
 			serverHost.IsReady.ShouldBeTrue();
 
-			await testClientAsync(serverPathPrefix).ConfigureAwait(false);
+			await testClientAsync(serverPathPrefix, cancellationToken).ConfigureAwait(false);
 
 			serverHost.Exit(ExpectedExitCode);
 		}
